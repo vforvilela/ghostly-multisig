@@ -1,0 +1,1887 @@
+{
+ "generated": "2026-11-27",
+ "cases": {
+  "signing": {
+   "network": "regtest",
+   "file": "# Multisig setup file (Coldcard format), from Ghostly Multisig\nName: ghostly-309180a9\nPolicy: 2 of 3\nFormat: P2WSH\n\nDerivation: m/48'/1'/0'/2'\n6E7542F4: tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn\n\nDerivation: m/48'/1'/0'/2'\n73C5DA0A: tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ\n\nDerivation: m/48'/1'/0'/2'\nB8688DF1: tpubDEfobrrtptRTbKf4gysDhoabneABDTAcdj3Vbn4XwPsLE2pmqpizSPRG6zHsbAMuiSgWmWPsYCLHTKTPpyrGJ5rAoTpKoQNZcxodiPf2tSJ\n",
+   "expected": {
+    "threshold": 2,
+    "script": "wsh",
+    "keys": [
+     {
+      "fp": "6e7542f4",
+      "path": "m/48'/1'/0'/2'",
+      "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+     },
+     {
+      "fp": "73c5da0a",
+      "path": "m/48'/1'/0'/2'",
+      "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+     },
+     {
+      "fp": "b8688df1",
+      "path": "m/48'/1'/0'/2'",
+      "xpub": "tpubDEfobrrtptRTbKf4gysDhoabneABDTAcdj3Vbn4XwPsLE2pmqpizSPRG6zHsbAMuiSgWmWPsYCLHTKTPpyrGJ5rAoTpKoQNZcxodiPf2tSJ"
+     }
+    ],
+    "receive0": "bcrt1q8mqj0pfc693hgaq7cxlvcfph3kgxgwu7wrfe786m5sh3m2zsvltqnlgh7e"
+   },
+   "parsers": {
+    "cc-abandon": {
+     "chain": "XTN",
+     "device": "73C5DA0A",
+     "enrol": {
+      "accepted": true,
+      "name": "ghostly-309180a9",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "6e7542f4",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+       },
+       {
+        "fp": "73c5da0a",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+       },
+       {
+        "fp": "b8688df1",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEfobrrtptRTbKf4gysDhoabneABDTAcdj3Vbn4XwPsLE2pmqpizSPRG6zHsbAMuiSgWmWPsYCLHTKTPpyrGJ5rAoTpKoQNZcxodiPf2tSJ"
+       }
+      ],
+      "matches": true
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-309180a9",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "6e7542f4",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+       },
+       {
+        "fp": "73c5da0a",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+       },
+       {
+        "fp": "b8688df1",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEfobrrtptRTbKf4gysDhoabneABDTAcdj3Vbn4XwPsLE2pmqpizSPRG6zHsbAMuiSgWmWPsYCLHTKTPpyrGJ5rAoTpKoQNZcxodiPf2tSJ"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "cc-default": {
+     "chain": "XTN",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: my key not included"
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-309180a9",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "6e7542f4",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+       },
+       {
+        "fp": "73c5da0a",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+       },
+       {
+        "fp": "b8688df1",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEfobrrtptRTbKf4gysDhoabneABDTAcdj3Vbn4XwPsLE2pmqpizSPRG6zHsbAMuiSgWmWPsYCLHTKTPpyrGJ5rAoTpKoQNZcxodiPf2tSJ"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "cc-mainnet": {
+     "chain": "BTC",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     },
+     "parse": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     }
+    },
+    "keystone": {
+     "accepted": false,
+     "error": "MultiSigWalletParseError(\"we don't support testnet for multisig yet\")"
+    },
+    "passport-BTC": {
+     "accepted": false,
+     "error": "AssertionError: The imported chain type doesn't match passport's current chain."
+    },
+    "passport-XTN": {
+     "accepted": true,
+     "name": "ghostly-309180a9",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "6e7542f4",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+      },
+      {
+       "fp": "73c5da0a",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+      },
+      {
+       "fp": "b8688df1",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEfobrrtptRTbKf4gysDhoabneABDTAcdj3Vbn4XwPsLE2pmqpizSPRG6zHsbAMuiSgWmWPsYCLHTKTPpyrGJ5rAoTpKoQNZcxodiPf2tSJ"
+      }
+     ],
+     "matches": true
+    },
+    "sparrow-mainnet": {
+     "accepted": false,
+     "error": "ImportException: Error importing Coldcard Multisig wallet <- IllegalArgumentException: Provided tpub extended key invalid on configured mainnet network. Use a testnet configuration to use this extended key."
+    },
+    "sparrow-regtest": {
+     "accepted": true,
+     "name": "ghostly-309180a9",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "6e7542f4",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+      },
+      {
+       "fp": "73c5da0a",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+      },
+      {
+       "fp": "b8688df1",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEfobrrtptRTbKf4gysDhoabneABDTAcdj3Vbn4XwPsLE2pmqpizSPRG6zHsbAMuiSgWmWPsYCLHTKTPpyrGJ5rAoTpKoQNZcxodiPf2tSJ"
+      }
+     ],
+     "matches": true
+    },
+    "sparrow-testnet": {
+     "accepted": true,
+     "name": "ghostly-309180a9",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "6e7542f4",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+      },
+      {
+       "fp": "73c5da0a",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+      },
+      {
+       "fp": "b8688df1",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEfobrrtptRTbKf4gysDhoabneABDTAcdj3Vbn4XwPsLE2pmqpizSPRG6zHsbAMuiSgWmWPsYCLHTKTPpyrGJ5rAoTpKoQNZcxodiPf2tSJ"
+      }
+     ],
+     "matches": true
+    }
+   }
+  },
+  "hardware-coldcard": {
+   "network": "regtest",
+   "file": "# Multisig setup file (Coldcard format), from Ghostly Multisig\nName: ghostly-0191533a\nPolicy: 2 of 3\nFormat: P2WSH\n\nDerivation: m/48'/1'/0'/2'\n6E7542F4: tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn\n\nDerivation: m/48'/1'/0'/2'\n73C5DA0A: tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ\n\nDerivation: m/48'/1'/0'/2'\n0F056943: tpubDF2rnouQaaYrXF4noGTv6rQYmx87cQ4GrUdhpvXkhtChwQPbdGTi8GA88NUaSrwZBwNsTkC9bFkkC8vDyGBVVAQTZ2AS6gs68RQXtXcCvkP\n",
+   "expected": {
+    "threshold": 2,
+    "script": "wsh",
+    "keys": [
+     {
+      "fp": "6e7542f4",
+      "path": "m/48'/1'/0'/2'",
+      "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+     },
+     {
+      "fp": "73c5da0a",
+      "path": "m/48'/1'/0'/2'",
+      "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+     },
+     {
+      "fp": "0f056943",
+      "path": "m/48'/1'/0'/2'",
+      "xpub": "tpubDF2rnouQaaYrXF4noGTv6rQYmx87cQ4GrUdhpvXkhtChwQPbdGTi8GA88NUaSrwZBwNsTkC9bFkkC8vDyGBVVAQTZ2AS6gs68RQXtXcCvkP"
+     }
+    ],
+    "receive0": "bcrt1qzan7wpelfmfq6zvsmx2uvu2j7885q7zvxj3uvys96wk7kzt4c8us4mydz7"
+   },
+   "parsers": {
+    "cc-abandon": {
+     "chain": "XTN",
+     "device": "73C5DA0A",
+     "enrol": {
+      "accepted": true,
+      "name": "ghostly-0191533a",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "6e7542f4",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+       },
+       {
+        "fp": "73c5da0a",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+       },
+       {
+        "fp": "0f056943",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDF2rnouQaaYrXF4noGTv6rQYmx87cQ4GrUdhpvXkhtChwQPbdGTi8GA88NUaSrwZBwNsTkC9bFkkC8vDyGBVVAQTZ2AS6gs68RQXtXcCvkP"
+       }
+      ],
+      "matches": true
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-0191533a",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "6e7542f4",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+       },
+       {
+        "fp": "73c5da0a",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+       },
+       {
+        "fp": "0f056943",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDF2rnouQaaYrXF4noGTv6rQYmx87cQ4GrUdhpvXkhtChwQPbdGTi8GA88NUaSrwZBwNsTkC9bFkkC8vDyGBVVAQTZ2AS6gs68RQXtXcCvkP"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "cc-default": {
+     "chain": "XTN",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": true,
+      "name": "ghostly-0191533a",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "6e7542f4",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+       },
+       {
+        "fp": "73c5da0a",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+       },
+       {
+        "fp": "0f056943",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDF2rnouQaaYrXF4noGTv6rQYmx87cQ4GrUdhpvXkhtChwQPbdGTi8GA88NUaSrwZBwNsTkC9bFkkC8vDyGBVVAQTZ2AS6gs68RQXtXcCvkP"
+       }
+      ],
+      "matches": true
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-0191533a",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "6e7542f4",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+       },
+       {
+        "fp": "73c5da0a",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+       },
+       {
+        "fp": "0f056943",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDF2rnouQaaYrXF4noGTv6rQYmx87cQ4GrUdhpvXkhtChwQPbdGTi8GA88NUaSrwZBwNsTkC9bFkkC8vDyGBVVAQTZ2AS6gs68RQXtXcCvkP"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "cc-mainnet": {
+     "chain": "BTC",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     },
+     "parse": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     }
+    },
+    "keystone": {
+     "accepted": false,
+     "error": "MultiSigWalletParseError(\"we don't support testnet for multisig yet\")"
+    },
+    "passport-BTC": {
+     "accepted": false,
+     "error": "AssertionError: The imported chain type doesn't match passport's current chain."
+    },
+    "passport-XTN": {
+     "accepted": true,
+     "name": "ghostly-0191533a",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "6e7542f4",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+      },
+      {
+       "fp": "73c5da0a",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+      },
+      {
+       "fp": "0f056943",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDF2rnouQaaYrXF4noGTv6rQYmx87cQ4GrUdhpvXkhtChwQPbdGTi8GA88NUaSrwZBwNsTkC9bFkkC8vDyGBVVAQTZ2AS6gs68RQXtXcCvkP"
+      }
+     ],
+     "matches": true
+    },
+    "sparrow-mainnet": {
+     "accepted": false,
+     "error": "ImportException: Error importing Coldcard Multisig wallet <- IllegalArgumentException: Provided tpub extended key invalid on configured mainnet network. Use a testnet configuration to use this extended key."
+    },
+    "sparrow-regtest": {
+     "accepted": true,
+     "name": "ghostly-0191533a",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "6e7542f4",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+      },
+      {
+       "fp": "73c5da0a",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+      },
+      {
+       "fp": "0f056943",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDF2rnouQaaYrXF4noGTv6rQYmx87cQ4GrUdhpvXkhtChwQPbdGTi8GA88NUaSrwZBwNsTkC9bFkkC8vDyGBVVAQTZ2AS6gs68RQXtXcCvkP"
+      }
+     ],
+     "matches": true
+    },
+    "sparrow-testnet": {
+     "accepted": true,
+     "name": "ghostly-0191533a",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "6e7542f4",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+      },
+      {
+       "fp": "73c5da0a",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+      },
+      {
+       "fp": "0f056943",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDF2rnouQaaYrXF4noGTv6rQYmx87cQ4GrUdhpvXkhtChwQPbdGTi8GA88NUaSrwZBwNsTkC9bFkkC8vDyGBVVAQTZ2AS6gs68RQXtXcCvkP"
+      }
+     ],
+     "matches": true
+    }
+   }
+  },
+  "hardware-bitbox02": {
+   "network": "regtest",
+   "file": "# Multisig setup file (Coldcard format), from Ghostly Multisig\nName: ghostly-2c412c8a\nPolicy: 2 of 3\nFormat: P2WSH\n\nDerivation: m/48'/1'/0'/2'\n6E7542F4: tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn\n\nDerivation: m/48'/1'/0'/2'\n73C5DA0A: tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ\n\nDerivation: m/48'/1'/0'/2'\n4C00739D: tpubDF5MSzQdK2GfhFLQXLW33cWMtgjmMoD1wK8uSfqRwVSKi67JPTZeFPjDJdJtPZ5W5phCBqo1EyEhzEv3qWDqP517AvU1hzvjujjMneMRJsm\n",
+   "expected": {
+    "threshold": 2,
+    "script": "wsh",
+    "keys": [
+     {
+      "fp": "6e7542f4",
+      "path": "m/48'/1'/0'/2'",
+      "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+     },
+     {
+      "fp": "73c5da0a",
+      "path": "m/48'/1'/0'/2'",
+      "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+     },
+     {
+      "fp": "4c00739d",
+      "path": "m/48'/1'/0'/2'",
+      "xpub": "tpubDF5MSzQdK2GfhFLQXLW33cWMtgjmMoD1wK8uSfqRwVSKi67JPTZeFPjDJdJtPZ5W5phCBqo1EyEhzEv3qWDqP517AvU1hzvjujjMneMRJsm"
+     }
+    ],
+    "receive0": "bcrt1qzxlp2z4gk2lu7py5cqhpmdvc82y2xdhdt3q2sxfumlltgl5zdw6sm39nrh"
+   },
+   "parsers": {
+    "cc-abandon": {
+     "chain": "XTN",
+     "device": "73C5DA0A",
+     "enrol": {
+      "accepted": true,
+      "name": "ghostly-2c412c8a",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "6e7542f4",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+       },
+       {
+        "fp": "73c5da0a",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+       },
+       {
+        "fp": "4c00739d",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDF5MSzQdK2GfhFLQXLW33cWMtgjmMoD1wK8uSfqRwVSKi67JPTZeFPjDJdJtPZ5W5phCBqo1EyEhzEv3qWDqP517AvU1hzvjujjMneMRJsm"
+       }
+      ],
+      "matches": true
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-2c412c8a",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "6e7542f4",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+       },
+       {
+        "fp": "73c5da0a",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+       },
+       {
+        "fp": "4c00739d",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDF5MSzQdK2GfhFLQXLW33cWMtgjmMoD1wK8uSfqRwVSKi67JPTZeFPjDJdJtPZ5W5phCBqo1EyEhzEv3qWDqP517AvU1hzvjujjMneMRJsm"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "cc-default": {
+     "chain": "XTN",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: my key not included"
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-2c412c8a",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "6e7542f4",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+       },
+       {
+        "fp": "73c5da0a",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+       },
+       {
+        "fp": "4c00739d",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDF5MSzQdK2GfhFLQXLW33cWMtgjmMoD1wK8uSfqRwVSKi67JPTZeFPjDJdJtPZ5W5phCBqo1EyEhzEv3qWDqP517AvU1hzvjujjMneMRJsm"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "cc-mainnet": {
+     "chain": "BTC",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     },
+     "parse": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     }
+    },
+    "keystone": {
+     "accepted": false,
+     "error": "MultiSigWalletParseError(\"we don't support testnet for multisig yet\")"
+    },
+    "passport-BTC": {
+     "accepted": false,
+     "error": "AssertionError: The imported chain type doesn't match passport's current chain."
+    },
+    "passport-XTN": {
+     "accepted": true,
+     "name": "ghostly-2c412c8a",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "6e7542f4",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+      },
+      {
+       "fp": "73c5da0a",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+      },
+      {
+       "fp": "4c00739d",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDF5MSzQdK2GfhFLQXLW33cWMtgjmMoD1wK8uSfqRwVSKi67JPTZeFPjDJdJtPZ5W5phCBqo1EyEhzEv3qWDqP517AvU1hzvjujjMneMRJsm"
+      }
+     ],
+     "matches": true
+    },
+    "sparrow-mainnet": {
+     "accepted": false,
+     "error": "ImportException: Error importing Coldcard Multisig wallet <- IllegalArgumentException: Provided tpub extended key invalid on configured mainnet network. Use a testnet configuration to use this extended key."
+    },
+    "sparrow-regtest": {
+     "accepted": true,
+     "name": "ghostly-2c412c8a",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "6e7542f4",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+      },
+      {
+       "fp": "73c5da0a",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+      },
+      {
+       "fp": "4c00739d",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDF5MSzQdK2GfhFLQXLW33cWMtgjmMoD1wK8uSfqRwVSKi67JPTZeFPjDJdJtPZ5W5phCBqo1EyEhzEv3qWDqP517AvU1hzvjujjMneMRJsm"
+      }
+     ],
+     "matches": true
+    },
+    "sparrow-testnet": {
+     "accepted": true,
+     "name": "ghostly-2c412c8a",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "6e7542f4",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+      },
+      {
+       "fp": "73c5da0a",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+      },
+      {
+       "fp": "4c00739d",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDF5MSzQdK2GfhFLQXLW33cWMtgjmMoD1wK8uSfqRwVSKi67JPTZeFPjDJdJtPZ5W5phCBqo1EyEhzEv3qWDqP517AvU1hzvjujjMneMRJsm"
+      }
+     ],
+     "matches": true
+    }
+   }
+  },
+  "hardware-ledger": {
+   "network": "regtest",
+   "file": "# Multisig setup file (Coldcard format), from Ghostly Multisig\nName: ghostly-7e461333\nPolicy: 2 of 3\nFormat: P2WSH\n\nDerivation: m/48'/1'/0'/2'\n6E7542F4: tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn\n\nDerivation: m/48'/1'/0'/2'\n73C5DA0A: tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ\n\nDerivation: m/48'/1'/0'/2'\nF5ACC2FD: tpubDFAqEGNyad35aBCKUAXbQGDjdVhNueno5ZZVEn3sQbW5ci457gLR7HyTmHBg93oourBssgUxuWz1jX5uhc1qaqFo9VsybY1J5FuedLfm4dK\n",
+   "expected": {
+    "threshold": 2,
+    "script": "wsh",
+    "keys": [
+     {
+      "fp": "6e7542f4",
+      "path": "m/48'/1'/0'/2'",
+      "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+     },
+     {
+      "fp": "73c5da0a",
+      "path": "m/48'/1'/0'/2'",
+      "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+     },
+     {
+      "fp": "f5acc2fd",
+      "path": "m/48'/1'/0'/2'",
+      "xpub": "tpubDFAqEGNyad35aBCKUAXbQGDjdVhNueno5ZZVEn3sQbW5ci457gLR7HyTmHBg93oourBssgUxuWz1jX5uhc1qaqFo9VsybY1J5FuedLfm4dK"
+     }
+    ],
+    "receive0": "bcrt1qq3qrl6jymy5zyqng8fqfrds23c08n4fh9dcjkjm73yta7fpgw26s3u8v4f"
+   },
+   "parsers": {
+    "cc-abandon": {
+     "chain": "XTN",
+     "device": "73C5DA0A",
+     "enrol": {
+      "accepted": true,
+      "name": "ghostly-7e461333",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "6e7542f4",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+       },
+       {
+        "fp": "73c5da0a",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+       },
+       {
+        "fp": "f5acc2fd",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFAqEGNyad35aBCKUAXbQGDjdVhNueno5ZZVEn3sQbW5ci457gLR7HyTmHBg93oourBssgUxuWz1jX5uhc1qaqFo9VsybY1J5FuedLfm4dK"
+       }
+      ],
+      "matches": true
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-7e461333",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "6e7542f4",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+       },
+       {
+        "fp": "73c5da0a",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+       },
+       {
+        "fp": "f5acc2fd",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFAqEGNyad35aBCKUAXbQGDjdVhNueno5ZZVEn3sQbW5ci457gLR7HyTmHBg93oourBssgUxuWz1jX5uhc1qaqFo9VsybY1J5FuedLfm4dK"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "cc-default": {
+     "chain": "XTN",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: my key not included"
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-7e461333",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "6e7542f4",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+       },
+       {
+        "fp": "73c5da0a",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+       },
+       {
+        "fp": "f5acc2fd",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFAqEGNyad35aBCKUAXbQGDjdVhNueno5ZZVEn3sQbW5ci457gLR7HyTmHBg93oourBssgUxuWz1jX5uhc1qaqFo9VsybY1J5FuedLfm4dK"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "cc-mainnet": {
+     "chain": "BTC",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     },
+     "parse": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     }
+    },
+    "keystone": {
+     "accepted": false,
+     "error": "MultiSigWalletParseError(\"we don't support testnet for multisig yet\")"
+    },
+    "passport-BTC": {
+     "accepted": false,
+     "error": "AssertionError: The imported chain type doesn't match passport's current chain."
+    },
+    "passport-XTN": {
+     "accepted": true,
+     "name": "ghostly-7e461333",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "6e7542f4",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+      },
+      {
+       "fp": "73c5da0a",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+      },
+      {
+       "fp": "f5acc2fd",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFAqEGNyad35aBCKUAXbQGDjdVhNueno5ZZVEn3sQbW5ci457gLR7HyTmHBg93oourBssgUxuWz1jX5uhc1qaqFo9VsybY1J5FuedLfm4dK"
+      }
+     ],
+     "matches": true
+    },
+    "sparrow-mainnet": {
+     "accepted": false,
+     "error": "ImportException: Error importing Coldcard Multisig wallet <- IllegalArgumentException: Provided tpub extended key invalid on configured mainnet network. Use a testnet configuration to use this extended key."
+    },
+    "sparrow-regtest": {
+     "accepted": true,
+     "name": "ghostly-7e461333",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "6e7542f4",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+      },
+      {
+       "fp": "73c5da0a",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+      },
+      {
+       "fp": "f5acc2fd",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFAqEGNyad35aBCKUAXbQGDjdVhNueno5ZZVEn3sQbW5ci457gLR7HyTmHBg93oourBssgUxuWz1jX5uhc1qaqFo9VsybY1J5FuedLfm4dK"
+      }
+     ],
+     "matches": true
+    },
+    "sparrow-testnet": {
+     "accepted": true,
+     "name": "ghostly-7e461333",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "6e7542f4",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+      },
+      {
+       "fp": "73c5da0a",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+      },
+      {
+       "fp": "f5acc2fd",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFAqEGNyad35aBCKUAXbQGDjdVhNueno5ZZVEn3sQbW5ci457gLR7HyTmHBg93oourBssgUxuWz1jX5uhc1qaqFo9VsybY1J5FuedLfm4dK"
+      }
+     ],
+     "matches": true
+    }
+   }
+  },
+  "hardware-jade": {
+   "network": "regtest",
+   "file": "# Multisig setup file (Coldcard format), from Ghostly Multisig\nName: ghostly-04b347ab\nPolicy: 2 of 3\nFormat: P2WSH\n\nDerivation: m/48'/1'/0'/2'\n6E7542F4: tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn\n\nDerivation: m/48'/1'/0'/2'\n73C5DA0A: tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ\n\nDerivation: m/48'/1'/0'/2'\n1273DA33: tpubDEAjmvwVDj4aTdNLyLdoVGdEuRf8ZMsZEun6Aa2uMHa3DFNSzXQFt8DY62gi37RuaPTcpoNFage2h6dPHABssCnWcp2j6srQTpWbGEKHgU1\n",
+   "expected": {
+    "threshold": 2,
+    "script": "wsh",
+    "keys": [
+     {
+      "fp": "6e7542f4",
+      "path": "m/48'/1'/0'/2'",
+      "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+     },
+     {
+      "fp": "73c5da0a",
+      "path": "m/48'/1'/0'/2'",
+      "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+     },
+     {
+      "fp": "1273da33",
+      "path": "m/48'/1'/0'/2'",
+      "xpub": "tpubDEAjmvwVDj4aTdNLyLdoVGdEuRf8ZMsZEun6Aa2uMHa3DFNSzXQFt8DY62gi37RuaPTcpoNFage2h6dPHABssCnWcp2j6srQTpWbGEKHgU1"
+     }
+    ],
+    "receive0": "bcrt1qr5ltyxgulfth3k0g8eyem5lmfzxk6kqexuepf59mz7m6x9g8a6dsp8anh3"
+   },
+   "parsers": {
+    "cc-abandon": {
+     "chain": "XTN",
+     "device": "73C5DA0A",
+     "enrol": {
+      "accepted": true,
+      "name": "ghostly-04b347ab",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "6e7542f4",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+       },
+       {
+        "fp": "73c5da0a",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+       },
+       {
+        "fp": "1273da33",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEAjmvwVDj4aTdNLyLdoVGdEuRf8ZMsZEun6Aa2uMHa3DFNSzXQFt8DY62gi37RuaPTcpoNFage2h6dPHABssCnWcp2j6srQTpWbGEKHgU1"
+       }
+      ],
+      "matches": true
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-04b347ab",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "6e7542f4",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+       },
+       {
+        "fp": "73c5da0a",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+       },
+       {
+        "fp": "1273da33",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEAjmvwVDj4aTdNLyLdoVGdEuRf8ZMsZEun6Aa2uMHa3DFNSzXQFt8DY62gi37RuaPTcpoNFage2h6dPHABssCnWcp2j6srQTpWbGEKHgU1"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "cc-default": {
+     "chain": "XTN",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: my key not included"
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-04b347ab",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "6e7542f4",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+       },
+       {
+        "fp": "73c5da0a",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+       },
+       {
+        "fp": "1273da33",
+        "path": "m/48'/1'/0'/2'",
+        "xpub": "tpubDEAjmvwVDj4aTdNLyLdoVGdEuRf8ZMsZEun6Aa2uMHa3DFNSzXQFt8DY62gi37RuaPTcpoNFage2h6dPHABssCnWcp2j6srQTpWbGEKHgU1"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "cc-mainnet": {
+     "chain": "BTC",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     },
+     "parse": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     }
+    },
+    "keystone": {
+     "accepted": false,
+     "error": "MultiSigWalletParseError(\"we don't support testnet for multisig yet\")"
+    },
+    "passport-BTC": {
+     "accepted": false,
+     "error": "AssertionError: The imported chain type doesn't match passport's current chain."
+    },
+    "passport-XTN": {
+     "accepted": true,
+     "name": "ghostly-04b347ab",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "6e7542f4",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+      },
+      {
+       "fp": "73c5da0a",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+      },
+      {
+       "fp": "1273da33",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEAjmvwVDj4aTdNLyLdoVGdEuRf8ZMsZEun6Aa2uMHa3DFNSzXQFt8DY62gi37RuaPTcpoNFage2h6dPHABssCnWcp2j6srQTpWbGEKHgU1"
+      }
+     ],
+     "matches": true
+    },
+    "sparrow-mainnet": {
+     "accepted": false,
+     "error": "ImportException: Error importing Coldcard Multisig wallet <- IllegalArgumentException: Provided tpub extended key invalid on configured mainnet network. Use a testnet configuration to use this extended key."
+    },
+    "sparrow-regtest": {
+     "accepted": true,
+     "name": "ghostly-04b347ab",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "6e7542f4",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+      },
+      {
+       "fp": "73c5da0a",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+      },
+      {
+       "fp": "1273da33",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEAjmvwVDj4aTdNLyLdoVGdEuRf8ZMsZEun6Aa2uMHa3DFNSzXQFt8DY62gi37RuaPTcpoNFage2h6dPHABssCnWcp2j6srQTpWbGEKHgU1"
+      }
+     ],
+     "matches": true
+    },
+    "sparrow-testnet": {
+     "accepted": true,
+     "name": "ghostly-04b347ab",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "6e7542f4",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEr6RnZBhg9P2UA4xpErtWva7VctGWh9jwnXHjejkHP1TzpgyY8sJq7vrB2p432PHwTZTcJc3xzdNfK9ZcYhDUjPVHdVNbYKHz3KnkrFtHn"
+      },
+      {
+       "fp": "73c5da0a",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDFH9dgzveyD8zTbPUFuLrGmCydNvxehyNdUXKJAQN8x4aZ4j6UZqGfnqFrD4NqyaTVGKbvEW54tsvPTK2UoSbCC1PJY8iCNiwTL3RWZEheQ"
+      },
+      {
+       "fp": "1273da33",
+       "path": "m/48'/1'/0'/2'",
+       "xpub": "tpubDEAjmvwVDj4aTdNLyLdoVGdEuRf8ZMsZEun6Aa2uMHa3DFNSzXQFt8DY62gi37RuaPTcpoNFage2h6dPHABssCnWcp2j6srQTpWbGEKHgU1"
+      }
+     ],
+     "matches": true
+    }
+   }
+  },
+  "caravan-bitcoin-2-of-2-P2SH-P2WSH_MAINNET": {
+   "network": "main",
+   "file": "# Multisig setup file (Coldcard format), from Ghostly Multisig\nName: ghostly-072a0b32\nPolicy: 2 of 2\nFormat: P2SH-P2WSH\n\nDerivation: m/48'/0'/100'/1'\n00000005: xpub6EwJjKaiocGvo9f7XSGXGwzo1GLB1URxSZ5Ccp1wqdxNkhrSoqNQkC2CeMsU675urdmFJLHSX62xz56HGcnn6u21wRy6uipovmzaE65PfBp\n\nDerivation: m/48'/0'/100'/1'\nF57EC65D: xpub6DcqYQxnbefzEBJF6osEuT5yXoHVZu1YCCsS5YkATvqD2h7tdMBgdBrUXk26FrJwawDGX6fHKPvhhZxKc5b8dPAPb8uANDhsjAPMJqTFDjH\n",
+   "expected": {
+    "threshold": 2,
+    "script": "sh-wsh",
+    "keys": [
+     {
+      "fp": "00000005",
+      "path": "m/48'/0'/100'/1'",
+      "xpub": "xpub6EwJjKaiocGvo9f7XSGXGwzo1GLB1URxSZ5Ccp1wqdxNkhrSoqNQkC2CeMsU675urdmFJLHSX62xz56HGcnn6u21wRy6uipovmzaE65PfBp"
+     },
+     {
+      "fp": "f57ec65d",
+      "path": "m/48'/0'/100'/1'",
+      "xpub": "xpub6DcqYQxnbefzEBJF6osEuT5yXoHVZu1YCCsS5YkATvqD2h7tdMBgdBrUXk26FrJwawDGX6fHKPvhhZxKc5b8dPAPb8uANDhsjAPMJqTFDjH"
+     }
+    ],
+    "receive0": "348PsXezZAHcW7RjmCoMJ8PHWx1QBTXJvm"
+   },
+   "parsers": {
+    "cc-abandon": {
+     "chain": "XTN",
+     "device": "73C5DA0A",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     },
+     "parse": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     }
+    },
+    "cc-default": {
+     "chain": "XTN",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     },
+     "parse": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     }
+    },
+    "cc-mainnet": {
+     "chain": "BTC",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: my key not included"
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-072a0b32",
+      "threshold": 2,
+      "script": "sh-wsh",
+      "keys": [
+       {
+        "fp": "00000005",
+        "path": "m/48'/0'/100'/1'",
+        "xpub": "xpub6EwJjKaiocGvo9f7XSGXGwzo1GLB1URxSZ5Ccp1wqdxNkhrSoqNQkC2CeMsU675urdmFJLHSX62xz56HGcnn6u21wRy6uipovmzaE65PfBp"
+       },
+       {
+        "fp": "f57ec65d",
+        "path": "m/48'/0'/100'/1'",
+        "xpub": "xpub6DcqYQxnbefzEBJF6osEuT5yXoHVZu1YCCsS5YkATvqD2h7tdMBgdBrUXk26FrJwawDGX6fHKPvhhZxKc5b8dPAPb8uANDhsjAPMJqTFDjH"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "keystone": {
+     "accepted": true,
+     "name": "ghostly-072a0b32",
+     "threshold": 2,
+     "script": "sh-wsh",
+     "keys": [
+      {
+       "fp": "00000005",
+       "path": "m/48'/0'/100'/1'",
+       "xpub": "xpub6EwJjKaiocGvo9f7XSGXGwzo1GLB1URxSZ5Ccp1wqdxNkhrSoqNQkC2CeMsU675urdmFJLHSX62xz56HGcnn6u21wRy6uipovmzaE65PfBp"
+      },
+      {
+       "fp": "f57ec65d",
+       "path": "m/48'/0'/100'/1'",
+       "xpub": "xpub6DcqYQxnbefzEBJF6osEuT5yXoHVZu1YCCsS5YkATvqD2h7tdMBgdBrUXk26FrJwawDGX6fHKPvhhZxKc5b8dPAPb8uANDhsjAPMJqTFDjH"
+      }
+     ],
+     "receive0": "348PsXezZAHcW7RjmCoMJ8PHWx1QBTXJvm",
+     "matches": true
+    },
+    "passport-BTC": {
+     "accepted": true,
+     "name": "ghostly-072a0b32",
+     "threshold": 2,
+     "script": "sh-wsh",
+     "keys": [
+      {
+       "fp": "00000005",
+       "path": "m/48'/0'/100'/1'",
+       "xpub": "xpub6EwJjKaiocGvo9f7XSGXGwzo1GLB1URxSZ5Ccp1wqdxNkhrSoqNQkC2CeMsU675urdmFJLHSX62xz56HGcnn6u21wRy6uipovmzaE65PfBp"
+      },
+      {
+       "fp": "f57ec65d",
+       "path": "m/48'/0'/100'/1'",
+       "xpub": "xpub6DcqYQxnbefzEBJF6osEuT5yXoHVZu1YCCsS5YkATvqD2h7tdMBgdBrUXk26FrJwawDGX6fHKPvhhZxKc5b8dPAPb8uANDhsjAPMJqTFDjH"
+      }
+     ],
+     "matches": true
+    },
+    "passport-XTN": {
+     "accepted": false,
+     "error": "AssertionError: The imported chain type doesn't match passport's current chain."
+    },
+    "sparrow-mainnet": {
+     "accepted": false,
+     "error": "ImportException: Error importing Coldcard Multisig wallet <- IllegalArgumentException: No enum constant com.sparrowwallet.drongo.protocol.ScriptType.P2SH-P2WSH"
+    },
+    "sparrow-regtest": {
+     "accepted": false,
+     "error": "ImportException: Error importing Coldcard Multisig wallet <- IllegalArgumentException: No enum constant com.sparrowwallet.drongo.protocol.ScriptType.P2SH-P2WSH"
+    },
+    "sparrow-testnet": {
+     "accepted": false,
+     "error": "ImportException: Error importing Coldcard Multisig wallet <- IllegalArgumentException: No enum constant com.sparrowwallet.drongo.protocol.ScriptType.P2SH-P2WSH"
+    }
+   }
+  },
+  "alias-caravan-bitcoin-2-of-2-P2SH-P2WSH_MAINNET": {
+   "network": "main",
+   "file": "# Multisig setup file (Coldcard format), from Ghostly Multisig\nName: ghostly-072a0b32\nPolicy: 2 of 2\nFormat: P2WSH-P2SH\n\nDerivation: m/48'/0'/100'/1'\n00000005: xpub6EwJjKaiocGvo9f7XSGXGwzo1GLB1URxSZ5Ccp1wqdxNkhrSoqNQkC2CeMsU675urdmFJLHSX62xz56HGcnn6u21wRy6uipovmzaE65PfBp\n\nDerivation: m/48'/0'/100'/1'\nF57EC65D: xpub6DcqYQxnbefzEBJF6osEuT5yXoHVZu1YCCsS5YkATvqD2h7tdMBgdBrUXk26FrJwawDGX6fHKPvhhZxKc5b8dPAPb8uANDhsjAPMJqTFDjH\n",
+   "expected": {
+    "threshold": 2,
+    "script": "sh-wsh",
+    "keys": [
+     {
+      "fp": "00000005",
+      "path": "m/48'/0'/100'/1'",
+      "xpub": "xpub6EwJjKaiocGvo9f7XSGXGwzo1GLB1URxSZ5Ccp1wqdxNkhrSoqNQkC2CeMsU675urdmFJLHSX62xz56HGcnn6u21wRy6uipovmzaE65PfBp"
+     },
+     {
+      "fp": "f57ec65d",
+      "path": "m/48'/0'/100'/1'",
+      "xpub": "xpub6DcqYQxnbefzEBJF6osEuT5yXoHVZu1YCCsS5YkATvqD2h7tdMBgdBrUXk26FrJwawDGX6fHKPvhhZxKc5b8dPAPb8uANDhsjAPMJqTFDjH"
+     }
+    ],
+    "receive0": "348PsXezZAHcW7RjmCoMJ8PHWx1QBTXJvm"
+   },
+   "parsers": {
+    "cc-alias-main": {
+     "chain": "BTC",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: my key not included"
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-072a0b32",
+      "threshold": 2,
+      "script": "sh-wsh",
+      "keys": [
+       {
+        "fp": "00000005",
+        "path": "m/48'/0'/100'/1'",
+        "xpub": "xpub6EwJjKaiocGvo9f7XSGXGwzo1GLB1URxSZ5Ccp1wqdxNkhrSoqNQkC2CeMsU675urdmFJLHSX62xz56HGcnn6u21wRy6uipovmzaE65PfBp"
+       },
+       {
+        "fp": "f57ec65d",
+        "path": "m/48'/0'/100'/1'",
+        "xpub": "xpub6DcqYQxnbefzEBJF6osEuT5yXoHVZu1YCCsS5YkATvqD2h7tdMBgdBrUXk26FrJwawDGX6fHKPvhhZxKc5b8dPAPb8uANDhsjAPMJqTFDjH"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "cc-alias-test": {
+     "chain": "XTN",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     },
+     "parse": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     }
+    },
+    "keystone": {
+     "accepted": true,
+     "name": "ghostly-072a0b32",
+     "threshold": 2,
+     "script": "sh-wsh",
+     "keys": [
+      {
+       "fp": "00000005",
+       "path": "m/48'/0'/100'/1'",
+       "xpub": "xpub6EwJjKaiocGvo9f7XSGXGwzo1GLB1URxSZ5Ccp1wqdxNkhrSoqNQkC2CeMsU675urdmFJLHSX62xz56HGcnn6u21wRy6uipovmzaE65PfBp"
+      },
+      {
+       "fp": "f57ec65d",
+       "path": "m/48'/0'/100'/1'",
+       "xpub": "xpub6DcqYQxnbefzEBJF6osEuT5yXoHVZu1YCCsS5YkATvqD2h7tdMBgdBrUXk26FrJwawDGX6fHKPvhhZxKc5b8dPAPb8uANDhsjAPMJqTFDjH"
+      }
+     ],
+     "receive0": "348PsXezZAHcW7RjmCoMJ8PHWx1QBTXJvm",
+     "matches": true
+    },
+    "passport-BTC": {
+     "accepted": true,
+     "name": "ghostly-072a0b32",
+     "threshold": 2,
+     "script": "sh-wsh",
+     "keys": [
+      {
+       "fp": "00000005",
+       "path": "m/48'/0'/100'/1'",
+       "xpub": "xpub6EwJjKaiocGvo9f7XSGXGwzo1GLB1URxSZ5Ccp1wqdxNkhrSoqNQkC2CeMsU675urdmFJLHSX62xz56HGcnn6u21wRy6uipovmzaE65PfBp"
+      },
+      {
+       "fp": "f57ec65d",
+       "path": "m/48'/0'/100'/1'",
+       "xpub": "xpub6DcqYQxnbefzEBJF6osEuT5yXoHVZu1YCCsS5YkATvqD2h7tdMBgdBrUXk26FrJwawDGX6fHKPvhhZxKc5b8dPAPb8uANDhsjAPMJqTFDjH"
+      }
+     ],
+     "matches": true
+    },
+    "passport-XTN": {
+     "accepted": false,
+     "error": "AssertionError: The imported chain type doesn't match passport's current chain."
+    },
+    "sparrow-mainnet": {
+     "accepted": true,
+     "name": "ghostly-072a0b32",
+     "threshold": 2,
+     "script": "sh-wsh",
+     "keys": [
+      {
+       "fp": "00000005",
+       "path": "m/48'/0'/100'/1'",
+       "xpub": "xpub6EwJjKaiocGvo9f7XSGXGwzo1GLB1URxSZ5Ccp1wqdxNkhrSoqNQkC2CeMsU675urdmFJLHSX62xz56HGcnn6u21wRy6uipovmzaE65PfBp"
+      },
+      {
+       "fp": "f57ec65d",
+       "path": "m/48'/0'/100'/1'",
+       "xpub": "xpub6DcqYQxnbefzEBJF6osEuT5yXoHVZu1YCCsS5YkATvqD2h7tdMBgdBrUXk26FrJwawDGX6fHKPvhhZxKc5b8dPAPb8uANDhsjAPMJqTFDjH"
+      }
+     ],
+     "matches": true
+    },
+    "sparrow-regtest": {
+     "accepted": false,
+     "error": "ImportException: Error importing Coldcard Multisig wallet <- IllegalArgumentException: Provided xpub extended key invalid on configured regtest network. Use a mainnet configuration to use this extended key."
+    },
+    "sparrow-testnet": {
+     "accepted": false,
+     "error": "ImportException: Error importing Coldcard Multisig wallet <- IllegalArgumentException: Provided xpub extended key invalid on configured testnet network. Use a mainnet configuration to use this extended key."
+    }
+   }
+  },
+  "caravan-bitcoin-2-of-2-P2SH-P2WSH_TESTNET": {
+   "network": "test",
+   "file": "# Multisig setup file (Coldcard format), from Ghostly Multisig\nName: ghostly-4dd7663a\nPolicy: 2 of 2\nFormat: P2SH-P2WSH\n\nDerivation: m/48'/1'/100'/1'\nF57EC65D: tpubDFc9Mm4tw6EkdXuk24MnQYRrDsdKEFh498vFffqa2KJmxytpcHbWrcFYwTKAdLxkSWpadzb5M5VVZ7PDAUjDjymvUmQ7pBbRecz2FM952Am\n\nDerivation: m/48'/1'/100'/1'\n00000002: tpubDErWN5qfdLwY9ZJo9HWpxjcuEFuEBVHSbQbPqF35LQr3etWNGirKcgAa93DZ4DmtHm36p2gTf4aj6KybLqHaS3UePM5LtPqtb3d3dYVDs2F\n",
+   "expected": {
+    "threshold": 2,
+    "script": "sh-wsh",
+    "keys": [
+     {
+      "fp": "f57ec65d",
+      "path": "m/48'/1'/100'/1'",
+      "xpub": "tpubDFc9Mm4tw6EkdXuk24MnQYRrDsdKEFh498vFffqa2KJmxytpcHbWrcFYwTKAdLxkSWpadzb5M5VVZ7PDAUjDjymvUmQ7pBbRecz2FM952Am"
+     },
+     {
+      "fp": "00000002",
+      "path": "m/48'/1'/100'/1'",
+      "xpub": "tpubDErWN5qfdLwY9ZJo9HWpxjcuEFuEBVHSbQbPqF35LQr3etWNGirKcgAa93DZ4DmtHm36p2gTf4aj6KybLqHaS3UePM5LtPqtb3d3dYVDs2F"
+     }
+    ],
+    "receive0": "2NDBsV6VBe4d2Ukp2XB644dg2xZ2SuWGkyG"
+   },
+   "parsers": {
+    "cc-abandon": {
+     "chain": "XTN",
+     "device": "73C5DA0A",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: my key not included"
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-4dd7663a",
+      "threshold": 2,
+      "script": "sh-wsh",
+      "keys": [
+       {
+        "fp": "f57ec65d",
+        "path": "m/48'/1'/100'/1'",
+        "xpub": "tpubDFc9Mm4tw6EkdXuk24MnQYRrDsdKEFh498vFffqa2KJmxytpcHbWrcFYwTKAdLxkSWpadzb5M5VVZ7PDAUjDjymvUmQ7pBbRecz2FM952Am"
+       },
+       {
+        "fp": "00000002",
+        "path": "m/48'/1'/100'/1'",
+        "xpub": "tpubDErWN5qfdLwY9ZJo9HWpxjcuEFuEBVHSbQbPqF35LQr3etWNGirKcgAa93DZ4DmtHm36p2gTf4aj6KybLqHaS3UePM5LtPqtb3d3dYVDs2F"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "cc-default": {
+     "chain": "XTN",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: my key not included"
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-4dd7663a",
+      "threshold": 2,
+      "script": "sh-wsh",
+      "keys": [
+       {
+        "fp": "f57ec65d",
+        "path": "m/48'/1'/100'/1'",
+        "xpub": "tpubDFc9Mm4tw6EkdXuk24MnQYRrDsdKEFh498vFffqa2KJmxytpcHbWrcFYwTKAdLxkSWpadzb5M5VVZ7PDAUjDjymvUmQ7pBbRecz2FM952Am"
+       },
+       {
+        "fp": "00000002",
+        "path": "m/48'/1'/100'/1'",
+        "xpub": "tpubDErWN5qfdLwY9ZJo9HWpxjcuEFuEBVHSbQbPqF35LQr3etWNGirKcgAa93DZ4DmtHm36p2gTf4aj6KybLqHaS3UePM5LtPqtb3d3dYVDs2F"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "cc-mainnet": {
+     "chain": "BTC",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     },
+     "parse": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     }
+    },
+    "keystone": {
+     "accepted": false,
+     "error": "MultiSigWalletParseError(\"we don't support testnet for multisig yet\")"
+    },
+    "passport-BTC": {
+     "accepted": false,
+     "error": "AssertionError: The imported chain type doesn't match passport's current chain."
+    },
+    "passport-XTN": {
+     "accepted": true,
+     "name": "ghostly-4dd7663a",
+     "threshold": 2,
+     "script": "sh-wsh",
+     "keys": [
+      {
+       "fp": "f57ec65d",
+       "path": "m/48'/1'/100'/1'",
+       "xpub": "tpubDFc9Mm4tw6EkdXuk24MnQYRrDsdKEFh498vFffqa2KJmxytpcHbWrcFYwTKAdLxkSWpadzb5M5VVZ7PDAUjDjymvUmQ7pBbRecz2FM952Am"
+      },
+      {
+       "fp": "00000002",
+       "path": "m/48'/1'/100'/1'",
+       "xpub": "tpubDErWN5qfdLwY9ZJo9HWpxjcuEFuEBVHSbQbPqF35LQr3etWNGirKcgAa93DZ4DmtHm36p2gTf4aj6KybLqHaS3UePM5LtPqtb3d3dYVDs2F"
+      }
+     ],
+     "matches": true
+    },
+    "sparrow-mainnet": {
+     "accepted": false,
+     "error": "ImportException: Error importing Coldcard Multisig wallet <- IllegalArgumentException: No enum constant com.sparrowwallet.drongo.protocol.ScriptType.P2SH-P2WSH"
+    },
+    "sparrow-regtest": {
+     "accepted": false,
+     "error": "ImportException: Error importing Coldcard Multisig wallet <- IllegalArgumentException: No enum constant com.sparrowwallet.drongo.protocol.ScriptType.P2SH-P2WSH"
+    },
+    "sparrow-testnet": {
+     "accepted": false,
+     "error": "ImportException: Error importing Coldcard Multisig wallet <- IllegalArgumentException: No enum constant com.sparrowwallet.drongo.protocol.ScriptType.P2SH-P2WSH"
+    }
+   }
+  },
+  "alias-caravan-bitcoin-2-of-2-P2SH-P2WSH_TESTNET": {
+   "network": "test",
+   "file": "# Multisig setup file (Coldcard format), from Ghostly Multisig\nName: ghostly-4dd7663a\nPolicy: 2 of 2\nFormat: P2WSH-P2SH\n\nDerivation: m/48'/1'/100'/1'\nF57EC65D: tpubDFc9Mm4tw6EkdXuk24MnQYRrDsdKEFh498vFffqa2KJmxytpcHbWrcFYwTKAdLxkSWpadzb5M5VVZ7PDAUjDjymvUmQ7pBbRecz2FM952Am\n\nDerivation: m/48'/1'/100'/1'\n00000002: tpubDErWN5qfdLwY9ZJo9HWpxjcuEFuEBVHSbQbPqF35LQr3etWNGirKcgAa93DZ4DmtHm36p2gTf4aj6KybLqHaS3UePM5LtPqtb3d3dYVDs2F\n",
+   "expected": {
+    "threshold": 2,
+    "script": "sh-wsh",
+    "keys": [
+     {
+      "fp": "f57ec65d",
+      "path": "m/48'/1'/100'/1'",
+      "xpub": "tpubDFc9Mm4tw6EkdXuk24MnQYRrDsdKEFh498vFffqa2KJmxytpcHbWrcFYwTKAdLxkSWpadzb5M5VVZ7PDAUjDjymvUmQ7pBbRecz2FM952Am"
+     },
+     {
+      "fp": "00000002",
+      "path": "m/48'/1'/100'/1'",
+      "xpub": "tpubDErWN5qfdLwY9ZJo9HWpxjcuEFuEBVHSbQbPqF35LQr3etWNGirKcgAa93DZ4DmtHm36p2gTf4aj6KybLqHaS3UePM5LtPqtb3d3dYVDs2F"
+     }
+    ],
+    "receive0": "2NDBsV6VBe4d2Ukp2XB644dg2xZ2SuWGkyG"
+   },
+   "parsers": {
+    "cc-alias-main": {
+     "chain": "BTC",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     },
+     "parse": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     }
+    },
+    "cc-alias-test": {
+     "chain": "XTN",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: my key not included"
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-4dd7663a",
+      "threshold": 2,
+      "script": "sh-wsh",
+      "keys": [
+       {
+        "fp": "f57ec65d",
+        "path": "m/48'/1'/100'/1'",
+        "xpub": "tpubDFc9Mm4tw6EkdXuk24MnQYRrDsdKEFh498vFffqa2KJmxytpcHbWrcFYwTKAdLxkSWpadzb5M5VVZ7PDAUjDjymvUmQ7pBbRecz2FM952Am"
+       },
+       {
+        "fp": "00000002",
+        "path": "m/48'/1'/100'/1'",
+        "xpub": "tpubDErWN5qfdLwY9ZJo9HWpxjcuEFuEBVHSbQbPqF35LQr3etWNGirKcgAa93DZ4DmtHm36p2gTf4aj6KybLqHaS3UePM5LtPqtb3d3dYVDs2F"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "keystone": {
+     "accepted": false,
+     "error": "MultiSigWalletParseError(\"we don't support testnet for multisig yet\")"
+    },
+    "passport-BTC": {
+     "accepted": false,
+     "error": "AssertionError: The imported chain type doesn't match passport's current chain."
+    },
+    "passport-XTN": {
+     "accepted": true,
+     "name": "ghostly-4dd7663a",
+     "threshold": 2,
+     "script": "sh-wsh",
+     "keys": [
+      {
+       "fp": "f57ec65d",
+       "path": "m/48'/1'/100'/1'",
+       "xpub": "tpubDFc9Mm4tw6EkdXuk24MnQYRrDsdKEFh498vFffqa2KJmxytpcHbWrcFYwTKAdLxkSWpadzb5M5VVZ7PDAUjDjymvUmQ7pBbRecz2FM952Am"
+      },
+      {
+       "fp": "00000002",
+       "path": "m/48'/1'/100'/1'",
+       "xpub": "tpubDErWN5qfdLwY9ZJo9HWpxjcuEFuEBVHSbQbPqF35LQr3etWNGirKcgAa93DZ4DmtHm36p2gTf4aj6KybLqHaS3UePM5LtPqtb3d3dYVDs2F"
+      }
+     ],
+     "matches": true
+    },
+    "sparrow-mainnet": {
+     "accepted": false,
+     "error": "ImportException: Error importing Coldcard Multisig wallet <- IllegalArgumentException: Provided tpub extended key invalid on configured mainnet network. Use a testnet configuration to use this extended key."
+    },
+    "sparrow-regtest": {
+     "accepted": true,
+     "name": "ghostly-4dd7663a",
+     "threshold": 2,
+     "script": "sh-wsh",
+     "keys": [
+      {
+       "fp": "f57ec65d",
+       "path": "m/48'/1'/100'/1'",
+       "xpub": "tpubDFc9Mm4tw6EkdXuk24MnQYRrDsdKEFh498vFffqa2KJmxytpcHbWrcFYwTKAdLxkSWpadzb5M5VVZ7PDAUjDjymvUmQ7pBbRecz2FM952Am"
+      },
+      {
+       "fp": "00000002",
+       "path": "m/48'/1'/100'/1'",
+       "xpub": "tpubDErWN5qfdLwY9ZJo9HWpxjcuEFuEBVHSbQbPqF35LQr3etWNGirKcgAa93DZ4DmtHm36p2gTf4aj6KybLqHaS3UePM5LtPqtb3d3dYVDs2F"
+      }
+     ],
+     "matches": true
+    },
+    "sparrow-testnet": {
+     "accepted": true,
+     "name": "ghostly-4dd7663a",
+     "threshold": 2,
+     "script": "sh-wsh",
+     "keys": [
+      {
+       "fp": "f57ec65d",
+       "path": "m/48'/1'/100'/1'",
+       "xpub": "tpubDFc9Mm4tw6EkdXuk24MnQYRrDsdKEFh498vFffqa2KJmxytpcHbWrcFYwTKAdLxkSWpadzb5M5VVZ7PDAUjDjymvUmQ7pBbRecz2FM952Am"
+      },
+      {
+       "fp": "00000002",
+       "path": "m/48'/1'/100'/1'",
+       "xpub": "tpubDErWN5qfdLwY9ZJo9HWpxjcuEFuEBVHSbQbPqF35LQr3etWNGirKcgAa93DZ4DmtHm36p2gTf4aj6KybLqHaS3UePM5LtPqtb3d3dYVDs2F"
+      }
+     ],
+     "matches": true
+    }
+   }
+  },
+  "caravan-bitcoin-2-of-2-P2WSH_MAINNET": {
+   "network": "main",
+   "file": "# Multisig setup file (Coldcard format), from Ghostly Multisig\nName: ghostly-1f977a55\nPolicy: 2 of 2\nFormat: P2WSH\n\nDerivation: m/48'/0'/100'/2'\n00000006: xpub6EwJjKaiocGvqSuM2jRZSuQ9HEddiFUFu9RdjE47zG7kXVNDQpJ3GyvskwYiLmvU4SBTNZyv8UH53QcmFEE23YwozE61V3dwzZJEFQr6H2b\n\nDerivation: m/48'/0'/100'/2'\nF57EC65D: xpub6DcqYQxnbefzFkaRBK63FSE2GzNuNnNhFGw1xV9RioVG7av6r3JDf1aELqBSq5gt5487CtNxvVtaiJjQU2HQWzgG5NzLyTPbYav6otW8qEc\n",
+   "expected": {
+    "threshold": 2,
+    "script": "wsh",
+    "keys": [
+     {
+      "fp": "00000006",
+      "path": "m/48'/0'/100'/2'",
+      "xpub": "xpub6EwJjKaiocGvqSuM2jRZSuQ9HEddiFUFu9RdjE47zG7kXVNDQpJ3GyvskwYiLmvU4SBTNZyv8UH53QcmFEE23YwozE61V3dwzZJEFQr6H2b"
+     },
+     {
+      "fp": "f57ec65d",
+      "path": "m/48'/0'/100'/2'",
+      "xpub": "xpub6DcqYQxnbefzFkaRBK63FSE2GzNuNnNhFGw1xV9RioVG7av6r3JDf1aELqBSq5gt5487CtNxvVtaiJjQU2HQWzgG5NzLyTPbYav6otW8qEc"
+     }
+    ],
+    "receive0": "bc1qf9asympax4r6xrndsqrw8p0qxe40tm9zkk69tkrc8p6eg8ju075sjeekkt"
+   },
+   "parsers": {
+    "cc-abandon": {
+     "chain": "XTN",
+     "device": "73C5DA0A",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     },
+     "parse": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     }
+    },
+    "cc-default": {
+     "chain": "XTN",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     },
+     "parse": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     }
+    },
+    "cc-mainnet": {
+     "chain": "BTC",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: my key not included"
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-1f977a55",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "00000006",
+        "path": "m/48'/0'/100'/2'",
+        "xpub": "xpub6EwJjKaiocGvqSuM2jRZSuQ9HEddiFUFu9RdjE47zG7kXVNDQpJ3GyvskwYiLmvU4SBTNZyv8UH53QcmFEE23YwozE61V3dwzZJEFQr6H2b"
+       },
+       {
+        "fp": "f57ec65d",
+        "path": "m/48'/0'/100'/2'",
+        "xpub": "xpub6DcqYQxnbefzFkaRBK63FSE2GzNuNnNhFGw1xV9RioVG7av6r3JDf1aELqBSq5gt5487CtNxvVtaiJjQU2HQWzgG5NzLyTPbYav6otW8qEc"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "keystone": {
+     "accepted": true,
+     "name": "ghostly-1f977a55",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "00000006",
+       "path": "m/48'/0'/100'/2'",
+       "xpub": "xpub6EwJjKaiocGvqSuM2jRZSuQ9HEddiFUFu9RdjE47zG7kXVNDQpJ3GyvskwYiLmvU4SBTNZyv8UH53QcmFEE23YwozE61V3dwzZJEFQr6H2b"
+      },
+      {
+       "fp": "f57ec65d",
+       "path": "m/48'/0'/100'/2'",
+       "xpub": "xpub6DcqYQxnbefzFkaRBK63FSE2GzNuNnNhFGw1xV9RioVG7av6r3JDf1aELqBSq5gt5487CtNxvVtaiJjQU2HQWzgG5NzLyTPbYav6otW8qEc"
+      }
+     ],
+     "receive0": "bc1qf9asympax4r6xrndsqrw8p0qxe40tm9zkk69tkrc8p6eg8ju075sjeekkt",
+     "matches": true
+    },
+    "passport-BTC": {
+     "accepted": true,
+     "name": "ghostly-1f977a55",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "00000006",
+       "path": "m/48'/0'/100'/2'",
+       "xpub": "xpub6EwJjKaiocGvqSuM2jRZSuQ9HEddiFUFu9RdjE47zG7kXVNDQpJ3GyvskwYiLmvU4SBTNZyv8UH53QcmFEE23YwozE61V3dwzZJEFQr6H2b"
+      },
+      {
+       "fp": "f57ec65d",
+       "path": "m/48'/0'/100'/2'",
+       "xpub": "xpub6DcqYQxnbefzFkaRBK63FSE2GzNuNnNhFGw1xV9RioVG7av6r3JDf1aELqBSq5gt5487CtNxvVtaiJjQU2HQWzgG5NzLyTPbYav6otW8qEc"
+      }
+     ],
+     "matches": true
+    },
+    "passport-XTN": {
+     "accepted": false,
+     "error": "AssertionError: The imported chain type doesn't match passport's current chain."
+    },
+    "sparrow-mainnet": {
+     "accepted": true,
+     "name": "ghostly-1f977a55",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "00000006",
+       "path": "m/48'/0'/100'/2'",
+       "xpub": "xpub6EwJjKaiocGvqSuM2jRZSuQ9HEddiFUFu9RdjE47zG7kXVNDQpJ3GyvskwYiLmvU4SBTNZyv8UH53QcmFEE23YwozE61V3dwzZJEFQr6H2b"
+      },
+      {
+       "fp": "f57ec65d",
+       "path": "m/48'/0'/100'/2'",
+       "xpub": "xpub6DcqYQxnbefzFkaRBK63FSE2GzNuNnNhFGw1xV9RioVG7av6r3JDf1aELqBSq5gt5487CtNxvVtaiJjQU2HQWzgG5NzLyTPbYav6otW8qEc"
+      }
+     ],
+     "matches": true
+    },
+    "sparrow-regtest": {
+     "accepted": false,
+     "error": "ImportException: Error importing Coldcard Multisig wallet <- IllegalArgumentException: Provided xpub extended key invalid on configured regtest network. Use a mainnet configuration to use this extended key."
+    },
+    "sparrow-testnet": {
+     "accepted": false,
+     "error": "ImportException: Error importing Coldcard Multisig wallet <- IllegalArgumentException: Provided xpub extended key invalid on configured testnet network. Use a mainnet configuration to use this extended key."
+    }
+   }
+  },
+  "caravan-bitcoin-2-of-2-P2WSH_TESTNET": {
+   "network": "test",
+   "file": "# Multisig setup file (Coldcard format), from Ghostly Multisig\nName: ghostly-8184cbb6\nPolicy: 2 of 2\nFormat: P2WSH\n\nDerivation: m/48'/1'/100'/2'\nF57EC65D: tpubDFc9Mm4tw6EkgR4YTC1GrU6CGEd9yw7KSBnSssL4LXAXh89D4uMZigRyv3csdXbeU3BhLQc4vWKTLewboA1Pt8Fu6fbHKu81MZ6VGdc32eM\n\nDerivation: m/48'/1'/100'/2'\n00000003: tpubDErWN5qfdLwYE94mh12oWr4uURDDNKCjKVhCEcAgZ7jKnnAwq5tcTF2iEk3VuznkJuk2G8SCHft9gS6aKbBd18ptYWPqKLRSTRQY7e2rrDj\n",
+   "expected": {
+    "threshold": 2,
+    "script": "wsh",
+    "keys": [
+     {
+      "fp": "f57ec65d",
+      "path": "m/48'/1'/100'/2'",
+      "xpub": "tpubDFc9Mm4tw6EkgR4YTC1GrU6CGEd9yw7KSBnSssL4LXAXh89D4uMZigRyv3csdXbeU3BhLQc4vWKTLewboA1Pt8Fu6fbHKu81MZ6VGdc32eM"
+     },
+     {
+      "fp": "00000003",
+      "path": "m/48'/1'/100'/2'",
+      "xpub": "tpubDErWN5qfdLwYE94mh12oWr4uURDDNKCjKVhCEcAgZ7jKnnAwq5tcTF2iEk3VuznkJuk2G8SCHft9gS6aKbBd18ptYWPqKLRSTRQY7e2rrDj"
+     }
+    ],
+    "receive0": "tb1qhgj3fnwn50pq966rjnj4pg8uz9ktsd8nge32qxd73ffvvg636p5q54g7m0"
+   },
+   "parsers": {
+    "cc-abandon": {
+     "chain": "XTN",
+     "device": "73C5DA0A",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: my key not included"
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-8184cbb6",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "f57ec65d",
+        "path": "m/48'/1'/100'/2'",
+        "xpub": "tpubDFc9Mm4tw6EkgR4YTC1GrU6CGEd9yw7KSBnSssL4LXAXh89D4uMZigRyv3csdXbeU3BhLQc4vWKTLewboA1Pt8Fu6fbHKu81MZ6VGdc32eM"
+       },
+       {
+        "fp": "00000003",
+        "path": "m/48'/1'/100'/2'",
+        "xpub": "tpubDErWN5qfdLwYE94mh12oWr4uURDDNKCjKVhCEcAgZ7jKnnAwq5tcTF2iEk3VuznkJuk2G8SCHft9gS6aKbBd18ptYWPqKLRSTRQY7e2rrDj"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "cc-default": {
+     "chain": "XTN",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: my key not included"
+     },
+     "parse": {
+      "accepted": true,
+      "name": "ghostly-8184cbb6",
+      "threshold": 2,
+      "script": "wsh",
+      "keys": [
+       {
+        "fp": "f57ec65d",
+        "path": "m/48'/1'/100'/2'",
+        "xpub": "tpubDFc9Mm4tw6EkgR4YTC1GrU6CGEd9yw7KSBnSssL4LXAXh89D4uMZigRyv3csdXbeU3BhLQc4vWKTLewboA1Pt8Fu6fbHKu81MZ6VGdc32eM"
+       },
+       {
+        "fp": "00000003",
+        "path": "m/48'/1'/100'/2'",
+        "xpub": "tpubDErWN5qfdLwYE94mh12oWr4uURDDNKCjKVhCEcAgZ7jKnnAwq5tcTF2iEk3VuznkJuk2G8SCHft9gS6aKbBd18ptYWPqKLRSTRQY7e2rrDj"
+       }
+      ],
+      "matches": true
+     }
+    },
+    "cc-mainnet": {
+     "chain": "BTC",
+     "device": "0F056943",
+     "enrol": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     },
+     "parse": {
+      "accepted": false,
+      "error": "AssertionError: wrong chain"
+     }
+    },
+    "keystone": {
+     "accepted": false,
+     "error": "MultiSigWalletParseError(\"we don't support testnet for multisig yet\")"
+    },
+    "passport-BTC": {
+     "accepted": false,
+     "error": "AssertionError: The imported chain type doesn't match passport's current chain."
+    },
+    "passport-XTN": {
+     "accepted": true,
+     "name": "ghostly-8184cbb6",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "f57ec65d",
+       "path": "m/48'/1'/100'/2'",
+       "xpub": "tpubDFc9Mm4tw6EkgR4YTC1GrU6CGEd9yw7KSBnSssL4LXAXh89D4uMZigRyv3csdXbeU3BhLQc4vWKTLewboA1Pt8Fu6fbHKu81MZ6VGdc32eM"
+      },
+      {
+       "fp": "00000003",
+       "path": "m/48'/1'/100'/2'",
+       "xpub": "tpubDErWN5qfdLwYE94mh12oWr4uURDDNKCjKVhCEcAgZ7jKnnAwq5tcTF2iEk3VuznkJuk2G8SCHft9gS6aKbBd18ptYWPqKLRSTRQY7e2rrDj"
+      }
+     ],
+     "matches": true
+    },
+    "sparrow-mainnet": {
+     "accepted": false,
+     "error": "ImportException: Error importing Coldcard Multisig wallet <- IllegalArgumentException: Provided tpub extended key invalid on configured mainnet network. Use a testnet configuration to use this extended key."
+    },
+    "sparrow-regtest": {
+     "accepted": true,
+     "name": "ghostly-8184cbb6",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "f57ec65d",
+       "path": "m/48'/1'/100'/2'",
+       "xpub": "tpubDFc9Mm4tw6EkgR4YTC1GrU6CGEd9yw7KSBnSssL4LXAXh89D4uMZigRyv3csdXbeU3BhLQc4vWKTLewboA1Pt8Fu6fbHKu81MZ6VGdc32eM"
+      },
+      {
+       "fp": "00000003",
+       "path": "m/48'/1'/100'/2'",
+       "xpub": "tpubDErWN5qfdLwYE94mh12oWr4uURDDNKCjKVhCEcAgZ7jKnnAwq5tcTF2iEk3VuznkJuk2G8SCHft9gS6aKbBd18ptYWPqKLRSTRQY7e2rrDj"
+      }
+     ],
+     "matches": true
+    },
+    "sparrow-testnet": {
+     "accepted": true,
+     "name": "ghostly-8184cbb6",
+     "threshold": 2,
+     "script": "wsh",
+     "keys": [
+      {
+       "fp": "f57ec65d",
+       "path": "m/48'/1'/100'/2'",
+       "xpub": "tpubDFc9Mm4tw6EkgR4YTC1GrU6CGEd9yw7KSBnSssL4LXAXh89D4uMZigRyv3csdXbeU3BhLQc4vWKTLewboA1Pt8Fu6fbHKu81MZ6VGdc32eM"
+      },
+      {
+       "fp": "00000003",
+       "path": "m/48'/1'/100'/2'",
+       "xpub": "tpubDErWN5qfdLwYE94mh12oWr4uURDDNKCjKVhCEcAgZ7jKnnAwq5tcTF2iEk3VuznkJuk2G8SCHft9gS6aKbBd18ptYWPqKLRSTRQY7e2rrDj"
+      }
+     ],
+     "matches": true
+    }
+   }
+  }
+ }
+}
