@@ -3,11 +3,11 @@
  * the fee, and how many of the co-signers have signed. Nothing here signs: signing stays in the person's coordinator and
  * hardware wallet, and their screen is the one to trust (see docs/design.md).
  */
-import { Address, NETWORK, OutScript, TEST_NETWORK, Transaction, p2sh, p2wsh } from "@scure/btc-signer";
+import { Address, NETWORK, OutScript, TEST_NETWORK, TaprootControlBlock, Transaction, p2sh, p2wsh, utils as btcUtils } from "@scure/btc-signer";
 import { base64, hex } from "@scure/base";
 import { urDecode } from "./ur.ts";
-import { secp256k1 } from "@noble/curves/secp256k1.js";
-import { deriveScript, derivePubkeys, fingerprints, type Wallet } from "./descriptor.ts";
+import { schnorr, secp256k1 } from "@noble/curves/secp256k1.js";
+import { deriveScript, derivePubkeys, deriveTaproot, fingerprints, tapBranch, tapLeafHash, TAPSCRIPT_LEAF, type TaprootAddress, type Wallet } from "./descriptor.ts";
 import { afterMet, compile, missingSignatures, olderLocks, olderMet, runWitness, satisfaction, scriptHasKey } from "./miniscript.ts";
 
 export type Network = "main" | "test" | "regtest";
@@ -135,10 +135,20 @@ export function combine(a: Transaction, b: Transaction): Transaction {
   for (let n = 0; n < incoming.inputsLength; n++) {
     const held = a.getInput(n);
     const sigs = incoming.getInput(n).partialSig;
-    if (!sigs?.length) continue;
-    const heldKeys = new Set((held.partialSig ?? []).map(([pk]) => hex.encode(pk)));
-    const fresh = held.finalScriptWitness ? [] : sigs.filter(([pk]) => !heldKeys.has(hex.encode(pk)));
-    setPartialSigs(incoming, n, fresh);
+    if (sigs?.length) {
+      const heldKeys = new Set((held.partialSig ?? []).map(([pk]) => hex.encode(pk)));
+      const fresh = held.finalScriptWitness ? [] : sigs.filter(([pk]) => !heldKeys.has(hex.encode(pk)));
+      setPartialSigs(incoming, n, fresh);
+    }
+    // Taproot: a Schnorr signature per key and leaf, and the key-path one.
+    const tapSigs = incoming.getInput(n).tapScriptSig;
+    if (tapSigs?.length) {
+      const id = ([k]: TapSig) => hex.encode(k.pubKey) + hex.encode(k.leafHash);
+      const heldKeys = new Set((held.tapScriptSig ?? []).map(id));
+      const fresh = held.finalScriptWitness ? [] : tapSigs.filter((s) => !heldKeys.has(id(s)));
+      setTapScriptSigs(incoming, n, fresh);
+    }
+    if (incoming.getInput(n).tapKeySig && (held.tapKeySig || held.finalScriptWitness)) incoming.updateInput(n, { tapKeySig: undefined }, true);
   }
   const out = a.clone();
   out.combine(incoming);
@@ -150,6 +160,10 @@ export function combine(a: Transaction, b: Transaction): Transaction {
     if (held?.length && out.getInput(n).finalScriptWitness && !out.getInput(n).bip32Derivation?.length) {
       out.updateInput(n, { bip32Derivation: held }, true);
     }
+    const heldTap = a.getInput(n).tapBip32Derivation;
+    if (heldTap?.length && out.getInput(n).finalScriptWitness && !out.getInput(n).tapBip32Derivation?.length) {
+      out.updateInput(n, { tapBip32Derivation: heldTap }, true);
+    }
   }
   return out;
 }
@@ -157,10 +171,86 @@ export function combine(a: Transaction, b: Transaction): Transaction {
 // ---------- signature checks ----------
 
 type Sig = [Uint8Array, Uint8Array];
+type TapSig = [{ pubKey: Uint8Array; leafHash: Uint8Array }, Uint8Array];
 
 function setPartialSigs(tx: Transaction, n: number, sigs: Sig[]): void {
   tx.updateInput(n, { partialSig: undefined }, true);
   if (sigs.length) tx.updateInput(n, { partialSig: sigs }, true);
+}
+
+function setTapScriptSigs(tx: Transaction, n: number, sigs: TapSig[]): void {
+  tx.updateInput(n, { tapScriptSig: undefined }, true);
+  if (sigs.length) tx.updateInput(n, { tapScriptSig: sigs }, true);
+}
+
+/** OP_1 <32 bytes>: a Taproot output. */
+const isTaproot = (script: Uint8Array) => script.length === 34 && script[0] === 0x51 && script[1] === 0x20;
+
+/** Every input's coin, as BIP 341's signature hash commits to all of them; null if one is missing. */
+function prevouts(tx: Transaction): { scripts: Uint8Array[]; amounts: bigint[] } | null {
+  const scripts: Uint8Array[] = [];
+  const amounts: bigint[] = [];
+  for (let i = 0; i < tx.inputsLength; i++) {
+    const prev = prevoutOf(tx, i);
+    if (!prev) return null;
+    scripts.push(prev.script);
+    amounts.push(prev.amount);
+  }
+  return { scripts, amounts };
+}
+
+/**
+ * True if sig (64 bytes, SIGHASH_DEFAULT, or 65 with its sighash byte) is the x-only key's valid Schnorr signature of
+ * input n (BIP 341): by the key path, or by the leaf `leafScript` (BIP 342).
+ */
+export function schnorrValid(tx: Transaction, n: number, xonly: Uint8Array, sig: Uint8Array, leafScript?: Uint8Array): boolean {
+  if (xonly.length !== 32 || (sig.length !== 64 && sig.length !== 65) || (sig.length === 65 && sig[64] === 0)) return false;
+  const all = prevouts(tx);
+  if (!all) return false;
+  try {
+    const msg = tx.preimageWitnessV1(n, all.scripts, sig.length === 65 ? sig[64] : 0, all.amounts, -1, leafScript, TAPSCRIPT_LEAF);
+    return schnorr.verify(sig.subarray(0, 64), msg, xonly);
+  } catch {
+    return false;
+  }
+}
+
+/** True if the control block proves the Tapscript leaf is in the tree of the Taproot output key q (BIP 341). */
+function controlBlockValid(cb: Uint8Array, script: Uint8Array, q: Uint8Array): boolean {
+  if (cb.length < 33 || (cb.length - 33) % 32 || cb.length > 33 + 128 * 32 || (cb[0] & 0xfe) !== TAPSCRIPT_LEAF) return false;
+  let h = tapLeafHash(script);
+  for (let i = 33; i < cb.length; i += 32) h = tapBranch(h, cb.subarray(i, i + 32));
+  try {
+    const [key, parity] = btcUtils.taprootTweakPubkey(cb.subarray(1, 33), h);
+    return same(key, q) && parity === (cb[0] & 1);
+  } catch {
+    return false;
+  }
+}
+
+/** The Tapscript leaves of a PSBT input (PSBT_IN_TAP_LEAF_SCRIPT) that are in the coin's tree. */
+function provenLeaves(tx: Transaction, n: number, q: Uint8Array): Uint8Array[] {
+  return (tx.getInput(n).tapLeafScript ?? [])
+    .filter(([cb, s]) => s[s.length - 1] === TAPSCRIPT_LEAF && controlBlockValid(TaprootControlBlock.encode(cb), s.subarray(0, -1), q))
+    .map(([, s]) => s.subarray(0, -1));
+}
+
+/**
+ * A finalised Taproot input checked against its coin: a key-path signature by the output key, or a script path
+ * whose control block proves its leaf and whose stack runs it (Tapscript). An annex is refused. Null if it does not spend.
+ */
+function finalCheckTaproot(tx: Transaction, n: number, w: Uint8Array[], q: Uint8Array): Signed[] | null {
+  if (tx.getInput(n).finalScriptSig?.length) return null;
+  if (w.length >= 2 && w[w.length - 1][0] === 0x50) return null;
+  if (w.length === 1) return schnorrValid(tx, n, q, w[0]) ? [{ pubkey: q, sig: w[0], keyPath: true }] : null;
+  if (w.length < 2) return null;
+  const script = w[w.length - 2];
+  if (!controlBlockValid(w[w.length - 1], script, q)) return null;
+  return runWitness(w.slice(0, -2), script, {
+    tap: true,
+    checkSig: (pubkey, sig) => schnorrValid(tx, n, pubkey, sig, script),
+    ...timelocks(tx, n),
+  });
 }
 
 /** The coin an input spends, from witness_utxo, else non_witness_utxo. */
@@ -214,7 +304,8 @@ function finalSigners(tx: Transaction, n: number, witness: Uint8Array[], witness
   return signers;
 }
 
-type Signed = { pubkey: Uint8Array; sig: Uint8Array };
+/** A signature a witness carries; keyPath: a Taproot key-path one, pubkey the output key. */
+type Signed = { pubkey: Uint8Array; sig: Uint8Array; keyPath?: boolean };
 
 /** What a transaction's input meets of the relative and absolute timelocks (BIP 68, 112, 65). */
 function timelocks(tx: Transaction, n: number): { older: (lock: number) => boolean; after: (lock: number) => boolean } {
@@ -232,6 +323,7 @@ function finalCheck(tx: Transaction, n: number, expected?: Uint8Array): Signed[]
   const input = tx.getInput(n);
   const w = input.finalScriptWitness;
   const prev = prevoutOf(tx, n);
+  if (w && prev && isTaproot(prev.script)) return finalCheckTaproot(tx, n, w, prev.script.subarray(2));
   const ws = expected ?? w?.[w.length - 1];
   if (!w || !prev || !ws || !locks(ws, prev.script)) return null;
   const wsh = p2wsh({ type: "unknown", script: ws } as never);
@@ -264,6 +356,27 @@ export function stripInvalid(tx: Transaction): { tx: Transaction; dropped: numbe
         dropped++;
       }
       continue;
+    }
+    if (prev && isTaproot(prev.script)) {
+      // A Taproot input: the key-path signature must be the output key's, a leaf's must be by a key in a leaf the
+      // PSBT proves is in the coin's tree.
+      const q = prev.script.subarray(2);
+      if (input.tapKeySig && !schnorrValid(out, n, q, input.tapKeySig)) {
+        out.updateInput(n, { tapKeySig: undefined }, true);
+        dropped++;
+      }
+      const tapSigs = input.tapScriptSig ?? [];
+      if (tapSigs.length) {
+        const leaves = provenLeaves(out, n, q);
+        const valid = tapSigs.filter(([{ pubKey, leafHash }, sig]) => {
+          const leaf = leaves.find((l) => same(tapLeafHash(l), leafHash));
+          return !!leaf && scriptHasKey(leaf, pubKey) && schnorrValid(out, n, pubKey, sig, leaf);
+        });
+        if (valid.length !== tapSigs.length) {
+          dropped += tapSigs.length - valid.length;
+          setTapScriptSigs(out, n, valid);
+        }
+      }
     }
     const sigs = input.partialSig ?? [];
     if (!sigs.length) continue;
@@ -330,6 +443,13 @@ export type Warning =
   | { k: "recovery-path"; blocks: number };
 
 type Derivation = [Uint8Array, { fingerprint: number; path: number[] }][];
+type TapDerivation = [Uint8Array, { hashes: Uint8Array[]; der: { fingerprint: number; path: number[] } }][];
+
+/** An input's or output's key paths: segwit v0's (PSBT_IN_BIP32_DERIVATION) and Taproot's (PSBT_IN_TAP_BIP32_DERIVATION). */
+const derivations = (x: { bip32Derivation?: Derivation; tapBip32Derivation?: TapDerivation }): Derivation => [
+  ...(x.bip32Derivation ?? []),
+  ...(x.tapBip32Derivation ?? []).map(([pk, { der }]): Derivation[number] => [pk, der]),
+];
 
 const fp = (n: number) => (n >>> 0).toString(16).padStart(8, "0");
 
@@ -377,6 +497,7 @@ const varint = (n: number) => (n < 0xfd ? 1 : n <= 0xffff ? 3 : 5);
  */
 function inputSize(wallet: Wallet, tx: Transaction, n: number): [number, number] {
   const base = 41 + (wallet.script === "sh-wsh" ? 35 : 0);
+  if (wallet.taproot) return [base, taprootWitnessSize(wallet, tx, n)];
   if (wallet.policy) {
     const key = Uint8Array.of(2, ...new Uint8Array(32));
     const ws = compile(wallet.policy, wallet.keys.map(() => key));
@@ -388,6 +509,54 @@ function inputSize(wallet: Wallet, tx: Transaction, n: number): [number, number]
   const ws = 3 + 34 * wallet.keys.length;
   const witness = varint(wallet.threshold + 2) + 1 + wallet.threshold * 73 + varint(ws) + ws;
   return [base, witness];
+}
+
+const witnessSize = (w: Uint8Array[]) => varint(w.length) + w.reduce((s, i) => s + varint(i.length) + i.length, 0);
+
+/**
+ * The smallest script-path witness (stack, leaf, control block) the signatures `sig(leaf, key)` and the input's
+ * timelocks satisfy, among the leaves `use` allows; the first in the descriptor's order on a tie. Null if none.
+ */
+function cheapestLeaf(addr: TaprootAddress, sig: (leaf: number, key: number) => Uint8Array | undefined, lock: ReturnType<typeof timelocks>, use = (_l: number) => true): Uint8Array[] | null {
+  let best: Uint8Array[] | null = null;
+  addr.leaves.forEach((leaf, l) => {
+    if (!use(l)) return;
+    const items = satisfaction(leaf.ms, { pubkey: (k) => addr.xonly[k], sig: (k) => sig(l, k), ...lock });
+    if (!items) return;
+    const w = [...items, leaf.script, leaf.controlBlock];
+    if (!best || witnessSize(w) < witnessSize(best)) best = w;
+  });
+  return best;
+}
+
+/** The signature a Taproot input holds by key `k` in leaf `l`. */
+function tapSigOf(tx: Transaction, n: number, addr: TaprootAddress) {
+  const sigs = tx.getInput(n).tapScriptSig ?? [];
+  return (l: number, k: number) => sigs.find(([key]) => same(key.pubKey, addr.xonly[k]) && same(key.leafHash, addr.leaves[l].leafHash))?.[1];
+}
+
+/**
+ * A Taproot input's witness bytes once signed: what finalise will make of the signatures it already has, if they are
+ * enough; else the key path if the wallet has one and no recovery timelock is open; else the smallest leaf with every
+ * key signing, among the recovery leaves whose timelock is open if one is (the reason for the spend), else among the
+ * leaves the timelocks allow. Signatures at 64 bytes (65 if the PSBT asks for a sighash type).
+ */
+function taprootWitnessSize(wallet: Wallet, tx: Transaction, n: number): number {
+  const input = tx.getInput(n);
+  const place = placeOf(wallet, derivations(input));
+  // The sizes are the same at every address: keys are 32 bytes, the tree's shape is the wallet's.
+  const addr = deriveTaproot(wallet, place?.branch ?? wallet.branches.receive, place?.index ?? 0);
+  const sigLen = input.sighashType ? 65 : 64;
+  if (input.tapKeySig && addr.keyPath) return witnessSize([input.tapKeySig]);
+  const lock = timelocks(tx, n);
+  const have = place ? cheapestLeaf(addr, tapSigOf(tx, n, addr), lock) : null;
+  if (have) return witnessSize(have);
+  const recovery = addr.leaves.map((leaf) => olderLocks(leaf.ms).some(lock.older));
+  if (addr.keyPath && !recovery.some(Boolean)) return witnessSize([new Uint8Array(sigLen)]);
+  const all = () => new Uint8Array(sigLen);
+  const w = cheapestLeaf(addr, all, lock, (l) => !recovery.some(Boolean) || recovery[l]) ??
+    cheapestLeaf(addr, all, { older: () => true, after: () => true });
+  return w ? witnessSize(w) : witnessSize([new Uint8Array(sigLen)]);
 }
 
 function estimateVsize(tx: Transaction, wallet: Wallet): number {
@@ -440,7 +609,7 @@ export function summarise(tx: Transaction, wallet: Wallet, network: Network): Su
       warnings.push({ k: "no-amount", n });
       totalIn = null;
     } else if (totalIn !== null) totalIn += amount;
-    const place = placeOf(wallet, input.bip32Derivation as Derivation | undefined);
+    const place = placeOf(wallet, derivations(input));
     const mine = !!place && !!script && same(deriveScript(wallet, place.branch, place.index).script, script);
     if (!mine) warnings.push({ k: "foreign-input", n });
     // Who signed, read against the wallet: a signature counts only if it is by one of the keys the descriptor derives
@@ -449,7 +618,14 @@ export function summarise(tx: Transaction, wallet: Wallet, network: Network): Su
     /** Indexes into wallet.keys of the keys whose valid signatures this input holds. */
     const signedKeys = new Set<number>();
     let final = false;
-    if (input.finalScriptWitness) {
+    if (wallet.taproot) {
+      const t = mine && amount !== null ? taprootInput(tx, n, wallet, place!, warnings) : null;
+      if (t) {
+        signedBy.push(...t.signedBy);
+        final = t.final;
+      }
+      short.push(t ? t.missing : wallet.threshold);
+    } else if (input.finalScriptWitness) {
       // A finaliser (Bitcoin Core) drops the key paths, so a finalised input is checked against its own witness
       // script; when the paths are still there it must also be this wallet's script.
       const pubkeys = mine ? derivePubkeys(wallet, place!.branch, place!.index) : [];
@@ -473,7 +649,9 @@ export function summarise(tx: Transaction, wallet: Wallet, network: Network): Su
         if (sig[sig.length - 1] !== 0x01) warnings.push({ k: "sighash", n });
       }
     }
-    if (final) short.push(0);
+    if (wallet.taproot) {
+      // Counted above.
+    } else if (final) short.push(0);
     else if (wallet.policy) {
       // The fewest signatures that complete any spending path this input's timelocks open.
       const need = missingSignatures(wallet.policy, (i) => signedKeys.has(i), timelocks(tx, n));
@@ -483,7 +661,8 @@ export function summarise(tx: Transaction, wallet: Wallet, network: Network): Su
       const open = olderLocks(wallet.policy).filter(timelocks(tx, n).older);
       if (open.length) warnings.push({ k: "recovery-path", blocks: Math.max(...open) });
     }
-    if (input.sighashType !== undefined && input.sighashType !== 1) warnings.push({ k: "sighash", n });
+    // SIGHASH_ALL; in Taproot also SIGHASH_DEFAULT (0), which signs the same.
+    if (input.sighashType !== undefined && input.sighashType !== 1 && !(wallet.taproot && input.sighashType === 0)) warnings.push({ k: "sighash", n });
     inputs.push({
       outpoint: `${hex.encode(input.txid!)}:${input.index}`,
       amount,
@@ -500,7 +679,7 @@ export function summarise(tx: Transaction, wallet: Wallet, network: Network): Su
     const script = output.script!;
     totalOut += output.amount!;
     const info: OutputInfo = { amount: output.amount!, address: addressOf(script, network), kind: "external" };
-    const place = placeOf(wallet, output.bip32Derivation as Derivation | undefined);
+    const place = placeOf(wallet, derivations(output));
     if (place) {
       if (same(deriveScript(wallet, place.branch, place.index).script, script)) {
         info.kind = place.branch === wallet.branches.change ? "change" : "receive";
@@ -541,6 +720,58 @@ export function summarise(tx: Transaction, wallet: Wallet, network: Network): Su
   return { txid: tx.id, inputs, outputs, fee, vsize, missing, signers, complete: missing === 0 && inputs.length > 0, warnings };
 }
 
+/** A Taproot signature signing as SIGHASH_ALL does: 64 bytes (SIGHASH_DEFAULT), or 65 ending in 0x01. */
+const tapSighashAll = (sig: Uint8Array) => sig.length === 64 || sig[64] === 0x01;
+
+/**
+ * A Taproot (Liana) wallet's input, read against the wallet's address: who signed (by the key path, or in which
+ * leaf: a signature counts only in its own leaf), and the fewest signatures still missing over the key path and every
+ * leaf the timelocks open (over every leaf if none is open yet). A recovery leaf whose timelock is open warns.
+ */
+function taprootInput(tx: Transaction, n: number, wallet: Wallet, place: { branch: number; index: number }, warnings: Warning[]): { signedBy: string[]; final: boolean; missing: number } {
+  const t = wallet.taproot!;
+  const addr = deriveTaproot(wallet, place.branch, place.index);
+  const input = tx.getInput(n);
+  const q = addr.script.subarray(2);
+  const lock = timelocks(tx, n);
+  const open = t.leaves.flatMap(olderLocks).filter(lock.older);
+  if (open.length) warnings.push({ k: "recovery-path", blocks: Math.max(...open) });
+  const signedBy: string[] = [];
+  const keyAt = (pk: Uint8Array) => addr.xonly.findIndex((p) => same(p, pk));
+  if (input.finalScriptWitness) {
+    // The coin is this wallet's address, so a witness that spends it is this wallet's.
+    const done = finalCheck(tx, n);
+    if (done) {
+      for (const { pubkey, sig, keyPath } of done) {
+        const at = keyPath ? t.internal! : keyAt(pubkey);
+        if (at !== null && at >= 0) signedBy.push(wallet.keys[at].fingerprint);
+        if (!tapSighashAll(sig)) warnings.push({ k: "sighash", n });
+      }
+      return { signedBy, final: true, missing: 0 };
+    }
+  }
+  let keySigned = false;
+  if (addr.keyPath && input.tapKeySig && schnorrValid(tx, n, q, input.tapKeySig)) {
+    keySigned = true;
+    signedBy.push(wallet.keys[t.internal!].fingerprint);
+    if (!tapSighashAll(input.tapKeySig)) warnings.push({ k: "sighash", n });
+  }
+  const perLeaf = addr.leaves.map(() => new Set<number>());
+  for (const [{ pubKey, leafHash }, sig] of input.finalScriptWitness ? [] : input.tapScriptSig ?? []) {
+    const l = addr.leaves.findIndex((leaf) => same(leaf.leafHash, leafHash));
+    const k = keyAt(pubKey);
+    if (l < 0 || k < 0 || !scriptHasKey(addr.leaves[l].script, pubKey)) continue;
+    if (!schnorrValid(tx, n, pubKey, sig, addr.leaves[l].script)) continue;
+    perLeaf[l].add(k);
+    signedBy.push(wallet.keys[k].fingerprint);
+    if (!tapSighashAll(sig)) warnings.push({ k: "sighash", n });
+  }
+  const need = (ctx: Pick<ReturnType<typeof timelocks>, "older" | "after">) =>
+    Math.min(addr.keyPath ? (keySigned ? 0 : 1) : Infinity, ...addr.leaves.map((leaf, l) => missingSignatures(leaf.ms, (k) => perLeaf[l].has(k), ctx)));
+  const missing = need(lock);
+  return { signedBy, final: false, missing: Number.isFinite(missing) ? missing : need({ older: () => true, after: () => true }) };
+}
+
 /**
  * The signed transaction, ready for any wallet or node to broadcast. Throws if signatures are missing. A miniscript
  * (Liana) wallet's inputs need the wallet: their witness is the smallest one the signatures and timelocks satisfy.
@@ -553,7 +784,8 @@ export function finalise(tx: Transaction, wallet?: Wallet): string {
     for (let n = 0; n < out.inputsLength; n++) {
       const input = out.getInput(n);
       if (input.finalScriptWitness) continue;
-      if (wallet?.policy) finaliseMiniscript(out, n, wallet);
+      if (wallet?.taproot) finaliseTaproot(out, n, wallet);
+      else if (wallet?.policy) finaliseMiniscript(out, n, wallet);
       else out.finalizeIdx(n);
     }
     return hex.encode(out.extract());
@@ -565,7 +797,7 @@ export function finalise(tx: Transaction, wallet?: Wallet): string {
 /** Finalises a miniscript wallet's input n: its witness from the PSBT's signatures, checked by running it. */
 function finaliseMiniscript(tx: Transaction, n: number, wallet: Wallet): void {
   const input = tx.getInput(n);
-  const place = placeOf(wallet, input.bip32Derivation as Derivation | undefined);
+  const place = placeOf(wallet, derivations(input));
   const prev = prevoutOf(tx, n);
   if (!place || !prev) throw new PsbtError(`input ${n + 1} is not this wallet's`);
   const { script, witnessScript } = deriveScript(wallet, place.branch, place.index);
@@ -585,4 +817,26 @@ function finaliseMiniscript(tx: Transaction, n: number, wallet: Wallet): void {
   if (!finalCheck(tx, n, witnessScript)) throw new PsbtError(`input ${n + 1}: the witness does not spend the coin`);
   // As BIP 174's finaliser does: the signing data goes once the witness is in.
   tx.updateInput(n, { partialSig: undefined, witnessScript: undefined, bip32Derivation: undefined, sighashType: undefined }, true);
+}
+
+/**
+ * Finalises a Taproot wallet's input n: by the key path if it has the internal key's signature (the cheapest spend),
+ * else by the smallest leaf the signatures and timelocks satisfy, its witness the leaf's stack, the leaf and its
+ * control block. Checked by running it.
+ */
+function finaliseTaproot(tx: Transaction, n: number, wallet: Wallet): void {
+  const input = tx.getInput(n);
+  const place = placeOf(wallet, derivations(input));
+  const prev = prevoutOf(tx, n);
+  if (!place || !prev) throw new PsbtError(`input ${n + 1} is not this wallet's`);
+  const addr = deriveTaproot(wallet, place.branch, place.index);
+  if (!same(addr.script, prev.script)) throw new PsbtError(`input ${n + 1} is not this wallet's`);
+  const witness = addr.keyPath && input.tapKeySig ? [input.tapKeySig] : cheapestLeaf(addr, tapSigOf(tx, n, addr), timelocks(tx, n));
+  if (!witness) throw new PsbtError(`input ${n + 1} has not enough signatures`);
+  tx.updateInput(n, { finalScriptWitness: witness }, true);
+  if (!finalCheck(tx, n)) throw new PsbtError(`input ${n + 1}: the witness does not spend the coin`);
+  tx.updateInput(n, {
+    partialSig: undefined, bip32Derivation: undefined, sighashType: undefined, tapKeySig: undefined, tapScriptSig: undefined,
+    tapLeafScript: undefined, tapBip32Derivation: undefined, tapInternalKey: undefined, tapMerkleRoot: undefined,
+  }, true);
 }

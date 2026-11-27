@@ -178,10 +178,9 @@ describe("Liana descriptors", () => {
     );
   });
 
-  test("Taproot Liana wallets are refused, plainly", () => {
-    expect(() => parseWallet(`tr(${key(A, o, tpub(1), "0;1")},and_v(v:pk(${key(B, o, tpub(2), "0;1")}),older(10)))`)).toThrow(
-      /^Taproot Liana wallets are not supported yet$/,
-    );
+  test("Taproot Liana wallets are read (see liana-taproot.test.ts); Tapscript's multi_a is refused in P2WSH", () => {
+    expect(parseWallet(`tr(${key(A, o, tpub(1), "0;1")},and_v(v:pk(${key(B, o, tpub(2), "0;1")}),older(10)))`).taproot).toBeDefined();
+    expect(() => parseWallet(`wsh(multi_a(2,${key(A, o, tpub(1), "0;1")},${key(B, o, tpub(2), "0;1")}))`)).toThrow(/multi_a is for Taproot/);
   });
 
   test("keys without a <receive;change> step, time-based timelocks and hash locks are refused", () => {

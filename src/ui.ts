@@ -10,8 +10,7 @@ import type { OutputInfo, Summary, Warning } from "./psbt.ts";
 import type { Network } from "./psbt.ts";
 import { fill, type Strings } from "./strings.ts";
 import { MAX_PSBT_TEXT, toBase64 } from "./psbt.ts";
-import { coldcardFile, fingerprints, type Wallet } from "./descriptor.ts";
-import { spendPaths } from "./miniscript.ts";
+import { coldcardFile, fingerprints, walletSpendPaths, type Wallet } from "./descriptor.ts";
 import { QrPanel } from "./qr.ts";
 
 type Child = Node | string | null | undefined | false;
@@ -113,8 +112,8 @@ export function mountMultisig(root: HTMLElement, app: MultisigController, s: Str
         h(
           "p",
           { class: "wallet-line" },
-          ...(w.policy
-            ? [h("strong", {}, "Miniscript"), ` · ${w.script === "wsh" ? "P2WSH" : "P2SH-P2WSH"}`, h("br"), walletPaths(w, s)]
+          ...(w.policy || w.taproot
+            ? [h("strong", {}, "Miniscript"), ` · ${w.taproot ? "Taproot" : w.script === "wsh" ? "P2WSH" : "P2SH-P2WSH"}`, h("br"), walletPaths(w, s)]
             : [
                 h("strong", {}, fill(s.walletSummary, { k: w.threshold, n: w.keys.length })),
                 ` · ${w.script === "wsh" ? "P2WSH" : "P2SH-P2WSH"} · `,
@@ -247,8 +246,9 @@ export function mountMultisig(root: HTMLElement, app: MultisigController, s: Str
       out.push(h("ul", { class: "warnings", role: "alert" }, ...sum.warnings.map((x) => h("li", {}, warningText(x, s)))));
     }
     // A miniscript wallet's paths each need their own signers: count those who signed, and those still missing.
-    const have = w.policy ? sum.signers.length : w.threshold - sum.missing;
-    const need = w.policy ? have + sum.missing : w.threshold;
+    const paths = !!(w.policy || w.taproot);
+    const have = paths ? sum.signers.length : w.threshold - sum.missing;
+    const need = paths ? have + sum.missing : w.threshold;
     out.push(
       h("h3", {}, s.signatures),
       h("p", { class: sum.complete ? "ok" : "" }, sum.complete ? s.ready : fill(s.signedOf, { have, need })),
@@ -414,9 +414,9 @@ export function warningText(w: Warning, s: Strings): string {
   }
 }
 
-/** A miniscript wallet's spending paths, e.g. "2 of a, b · after 1000 blocks, 1 of c". */
+/** A miniscript wallet's spending paths, e.g. "2 of a, b · after 1000 blocks, 1 of c" (a Taproot one's key path first). */
 export function walletPaths(w: Wallet, s: Strings): string {
-  return spendPaths(w.policy!)
+  return walletSpendPaths(w)
     .map((p) => {
       const who = p.groups
         .map((g) => fill(s.walletPath, { k: g.k, keys: [...new Set(g.keys.map((i) => w.keys[i].fingerprint))].join(", ") }))

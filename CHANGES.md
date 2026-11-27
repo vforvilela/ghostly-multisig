@@ -35,6 +35,15 @@ What each published version of Multisig changed, newest first. A version is publ
   forms, keys at `<0;1>`, `<2;3>`...). Change is re-derived from the miniscript; signers are named per co-signer however
   many paths their key is on; "missing" and "fully signed" follow the spending paths, not k-of-n; the witness is the
   smallest one the signatures and timelocks satisfy, checked by running it. A spend through a recovery path is flagged
-  with its timelock. Taproot Liana wallets are refused ("not supported yet").
+  with its timelock.
 - Tested against Liana 16.0 (lianad, the release binary) on regtest: a primary-path and a recovery-path spend that
   lianad created, merged and broadcast, co-signed by Bitcoin Core wallets; the app finalises each to lianad's transaction.
+- Reads Taproot Liana wallets (`tr(...)`): a key-path primary key or Liana's unspendable internal key (never shown
+  as a co-signer), `multi_a`/`pk` leaves with `older` recovery paths. Addresses and change from the tree; signers named
+  from `tap_bip32_derivs`; Schnorr signatures checked per leaf (an invalid or misplaced one is taken out); "missing"
+  follows the key path and each leaf with its timelock; the witness is the key path when signed there, else the
+  cheapest leaf the signatures complete. Size estimates match the real vsize. A recovery spend is flagged. Refused:
+  `sortedmulti_a`, `multi` in Tapscript (and `multi_a` in P2WSH), a bare internal key other than BIP 341's H, an annex.
+- Tested against lianad 16.0 with two Taproot wallets (unspendable key with three leaves; key path with one recovery
+  leaf): each wallet's primary and recovery spend created, merged, finalised and broadcast by lianad, co-signed by Core
+  v30.2; the app reads lianad's addresses, merges the copies in either order and finalises each to lianad's transaction.

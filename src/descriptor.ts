@@ -11,16 +11,21 @@
  * Caravan's wallet file (JSON) is read as the descriptor it describes (caravanWallet).
  *
  * A Liana wallet is a miniscript one: wsh(MINISCRIPT), e.g. wsh(or_d(pk(A),and_v(v:pkh(B),older(N)))), each key with
- * its own <receive;change> pair (Liana puts one key on several paths with <0;1>, <2;3>...). See miniscript.ts. Taproot
- * Liana wallets (tr(...)) are refused.
+ * its own <receive;change> pair (Liana puts one key on several paths with <0;1>, <2;3>...). See miniscript.ts.
+ *
+ * A Taproot Liana wallet is tr(INTERNAL,TREE): TREE is one Tapscript miniscript leaf or {TREE,TREE}. INTERNAL is a
+ * co-signer's key (Liana's one-key primary path: a key-path spend), or an unspendable key, never shown as a co-signer:
+ * BIP 341's H point, as x-only hex or as an xpub whose key is H (Liana's, its chain code taken from the tree's keys, at
+ * <0;1>/*, written without an origin). Only that key may come without its origin.
  *
  * The wallet is the person's own, pasted from their coordinator: it is never taken from the contact (see docs/protocol.md).
  */
 import { HDKey } from "@scure/bip32";
-import { p2ms, p2sh, p2wsh } from "@scure/btc-signer";
+import { p2ms, p2sh, p2wsh, utils as btcUtils } from "@scure/btc-signer";
 import { base58check, hex } from "@scure/base";
 import { sha256 } from "@noble/hashes/sha2.js";
-import { compile, MiniscriptError, olderLocks, parseMiniscript, printMiniscript, type Miniscript } from "./miniscript.ts";
+import { schnorr } from "@noble/curves/secp256k1.js";
+import { compile, MiniscriptError, olderLocks, parseMiniscript, printMiniscript, spendPaths, type Miniscript, type SpendPath } from "./miniscript.ts";
 
 export const HARDENED = 0x80000000;
 
@@ -39,7 +44,7 @@ export interface WalletKey {
   hd: HDKey;
 }
 
-export type ScriptType = "wsh" | "sh-wsh";
+export type ScriptType = "wsh" | "sh-wsh" | "tr";
 export type Chain = "main" | "test";
 
 export interface Wallet {
@@ -49,14 +54,29 @@ export interface Wallet {
   threshold: number;
   /** The descriptor's keys in order. In a miniscript wallet one co-signer's key can be here more than once, at other paths. */
   keys: WalletKey[];
-  /** A miniscript (Liana) wallet's script, its keys indexes into `keys`; absent for a multisig wallet. */
+  /** A miniscript (Liana) wallet's script, its keys indexes into `keys`; absent for a multisig wallet and a Taproot one. */
   policy?: Miniscript;
+  /** A Taproot (Liana) wallet's internal key and script tree. */
+  taproot?: Taproot;
   /** The branch step's value for receive and change addresses; a miniscript wallet's are 0 and 1, each key's own in its `branches`. */
   branches: { receive: number; change: number };
   /** xpub (main) or tpub (test, signet, regtest). */
   chain: Chain;
   /** 16 hex characters: the same wallet gives the same id whatever way the descriptor was written. */
   id: string;
+}
+
+/** A Taproot script tree: one leaf, or a branch of two trees. */
+export type TapTree = { leaf: Miniscript } | { left: TapTree; right: TapTree };
+
+export interface Taproot {
+  /** The internal key, an index into the wallet's keys (its spend is a key-path spend); null if it is unspendable. */
+  internal: number | null;
+  /** The unspendable internal key: an xpub whose key is H, derived as the wallet's keys are, or H itself (x-only). */
+  unspendable?: WalletKey | Uint8Array;
+  tree: TapTree;
+  /** The tree's leaves, in the descriptor's order. */
+  leaves: Miniscript[];
 }
 
 export class DescriptorError extends Error {}
@@ -140,17 +160,20 @@ interface ParsedKey {
   steps: (number | number[] | "index")[];
 }
 
-function parseKey(raw: string): ParsedKey {
+function parseKey(raw: string, noOrigin = false): ParsedKey {
   // `/**` is BIP 388's (and Sparrow's) short form of `/<0;1>/*`.
   const text = raw.endsWith("/**") ? `${raw.slice(0, -3)}/<0;1>/*` : raw;
-  const m =/^\[([0-9a-fA-F]{8})((?:\/[0-9]+['hH]?)*)\]([1-9A-HJ-NP-Za-km-z]+)((?:\/(?:[0-9]+|<[0-9]+;[0-9]+>|\*))*)$/.exec(text);
+  const re = noOrigin
+    ? /^(?:\[([0-9a-fA-F]{8})((?:\/[0-9]+['hH]?)*)\])?([1-9A-HJ-NP-Za-km-z]+)((?:\/(?:[0-9]+|<[0-9]+;[0-9]+>|\*))*)$/
+    : /^\[([0-9a-fA-F]{8})((?:\/[0-9]+['hH]?)*)\]([1-9A-HJ-NP-Za-km-z]+)((?:\/(?:[0-9]+|<[0-9]+;[0-9]+>|\*))*)$/;
+  const m = re.exec(text);
   if (!m) {
     if (!text.startsWith("[")) throw new DescriptorError("every key needs its origin, as [fingerprint/path]xpub");
     throw new DescriptorError(`a key this app cannot read: ${text.slice(0, 24)}…`);
   }
   const { xpub, chain, hd } = normaliseKey(m[3]);
   const origin = m[2] ? m[2].slice(1).split("/").map(pathStep) : [];
-  if (hd.depth !== origin.length) throw new DescriptorError(`key ${m[1].toLowerCase()}: its origin path does not match its depth`);
+  if (m[1] && hd.depth !== origin.length) throw new DescriptorError(`key ${m[1].toLowerCase()}: its origin path does not match its depth`);
   const steps = m[4] ? m[4].slice(1).split("/").map((s): number | number[] | "index" => {
     if (s === "*") return "index";
     if (s.startsWith("<")) return s.slice(1, -1).split(";").map(pathStep);
@@ -162,7 +185,7 @@ function parseKey(raw: string): ParsedKey {
   if (steps.some((s) => typeof s === "number" && s >= HARDENED) || steps.some((s) => Array.isArray(s) && s.some((n) => n >= HARDENED))) {
     throw new DescriptorError("hardened steps after the key cannot be derived from a public key");
   }
-  return { fingerprint: m[1].toLowerCase(), origin, xpub, chain, hd, steps };
+  return { fingerprint: (m[1] ?? "").toLowerCase(), origin, xpub, chain, hd, steps };
 }
 
 interface ParsedLine {
@@ -171,6 +194,7 @@ interface ParsedLine {
   threshold: number;
   keys: ParsedKey[];
   policy?: Miniscript;
+  taproot?: { internal: number | null; unspendable?: ParsedKey | Uint8Array; tree: TapTree; leaves: Miniscript[] };
 }
 
 function parseMiniscriptLine(script: ScriptType, body: string): ParsedLine {
@@ -184,15 +208,81 @@ function parseMiniscriptLine(script: ScriptType, body: string): ParsedLine {
   }
   if (!keys.length) throw new DescriptorError("the descriptor has no keys");
   if (keys.length > 64) throw new DescriptorError("too many keys");
-  if (olderLocks(policy).some((n) => n & 0x00400000 || n > 0xffff)) {
+  checkLocks(policy);
+  return { script, sorted: false, threshold: firstThreshold(policy), keys, policy };
+}
+
+function checkLocks(ms: Miniscript) {
+  if (olderLocks(ms).some((n) => n & 0x00400000 || n > 0xffff)) {
     throw new DescriptorError("only timelocks in blocks (up to 65535) are supported");
   }
+}
+
+function firstThreshold(policy: Miniscript): number {
   let threshold = 1;
   for (let m: Miniscript = policy; ; m = m.subs[0]) {
-    if (m.f === "multi" || m.f === "thresh") threshold = m.k!;
-    if (m.f === "multi" || m.f === "thresh" || !m.subs.length) break;
+    if (m.f === "multi" || m.f === "multi_a" || m.f === "thresh") threshold = m.k!;
+    if (m.f === "multi" || m.f === "multi_a" || m.f === "thresh" || !m.subs.length) break;
   }
-  return { script, sorted: false, threshold, keys, policy };
+  return threshold;
+}
+
+/** BIP 341's H: the x coordinate of a point no one knows the private key of. */
+export const NUMS_H = hex.decode("50929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0");
+
+/** Splits `a,b` at its first comma outside (), {} and []. */
+function splitTop(text: string): string[] {
+  let depth = 0;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if ("({[".includes(c)) depth++;
+    else if (")}]".includes(c)) depth--;
+    else if (c === "," && depth === 0) return [text.slice(0, i), text.slice(i + 1)];
+  }
+  return [text];
+}
+
+/** tr(INTERNAL,TREE): the internal key (a co-signer's, or unspendable) and the tree of Tapscript leaves. */
+function parseTaprootLine(body: string): ParsedLine {
+  const [internalText, treeText] = splitTop(body);
+  if (treeText === undefined) throw new DescriptorError("a Taproot wallet with no script leaves is a one-key wallet, not a multisig one");
+  const keys: ParsedKey[] = [];
+  let internal: number | null = null;
+  let unspendable: ParsedKey | Uint8Array | undefined;
+  if (/^(02)?[0-9a-fA-F]{64}$/.test(internalText)) {
+    const x = hex.decode(internalText.slice(-64).toLowerCase());
+    if (!x.every((b, i) => b === NUMS_H[i])) throw new DescriptorError("the internal key is a bare public key: give it as [fingerprint/path]xpub/<0;1>/*");
+    unspendable = x;
+  } else {
+    const k = parseKey(internalText, true);
+    if (k.hd.publicKey![0] === 0x02 && k.hd.publicKey!.subarray(1).every((b, i) => b === NUMS_H[i])) unspendable = k;
+    else if (!k.fingerprint) throw new DescriptorError("every key needs its origin, as [fingerprint/path]xpub");
+    else internal = keys.push(k) - 1;
+  }
+  const leaves: Miniscript[] = [];
+  const tree = (text: string, depth: number): TapTree => {
+    if (depth > 128) throw new DescriptorError("the Taproot tree is too deep");
+    if (text.startsWith("{")) {
+      if (!text.endsWith("}")) throw new DescriptorError("the Taproot tree's braces do not match");
+      const parts = splitTop(text.slice(1, -1));
+      if (parts.length !== 2) throw new DescriptorError("a branch of the Taproot tree, {A,B}, holds two trees");
+      return { left: tree(parts[0], depth + 1), right: tree(parts[1], depth + 1) };
+    }
+    let ms: Miniscript;
+    try {
+      ms = parseMiniscript(text, (t) => keys.push(parseKey(t)) - 1, true);
+    } catch (e) {
+      if (e instanceof MiniscriptError) throw new DescriptorError(`not a wallet descriptor this app can read: ${e.message}`);
+      throw e;
+    }
+    checkLocks(ms);
+    leaves.push(ms);
+    return { leaf: ms };
+  };
+  const t = tree(treeText, 0);
+  if (keys.length > 64) throw new DescriptorError("too many keys");
+  const threshold = internal !== null ? 1 : firstThreshold(leaves[0]);
+  return { script: "tr", sorted: false, threshold, keys, taproot: { internal, unspendable, tree: t, leaves } };
 }
 
 function parseLine(raw: string): ParsedLine {
@@ -213,10 +303,10 @@ function parseLine(raw: string): ParsedLine {
     body = sh[1];
   } else if (wsh) {
     body = wsh[1];
-  } else if (text.startsWith("tr(")) {
-    throw new DescriptorError("Taproot Liana wallets are not supported yet");
+  } else if (/^tr\(.*\)$/.test(text)) {
+    return parseTaprootLine(text.slice(3, -1));
   } else {
-    throw new DescriptorError("only wsh(...) and sh(wsh(...)) descriptors are supported");
+    throw new DescriptorError("only wsh(...), sh(wsh(...)) and Taproot Liana tr(...) descriptors are supported");
   }
   const ms = /^(sortedmulti|multi)\((\d+),([^()]*)\)$/.exec(body);
   if (!ms) {
@@ -224,7 +314,7 @@ function parseLine(raw: string): ParsedLine {
     return parseMiniscriptLine(script, body);
   }
   const threshold = Number(ms[2]);
-  const keys = ms[3].split(",").map(parseKey);
+  const keys = ms[3].split(",").map((k) => parseKey(k));
   if (keys.length < 2 || keys.length > 15) throw new DescriptorError("a multisig wallet has 2 to 15 keys");
   if (threshold < 1 || threshold > keys.length) throw new DescriptorError(`threshold ${threshold} of ${keys.length} keys is not possible`);
   return { script, sorted: ms[1] === "sortedmulti", threshold, keys };
@@ -277,7 +367,7 @@ export function parseWallet(input: string): Wallet {
   if (lines.length > 2) throw new DescriptorError("paste one descriptor (or its receive and change lines)");
   const parsed = lines.map(parseLine);
   const first = parsed[0];
-  if (first.policy || parsed[1]?.policy) {
+  if (first.policy || parsed[1]?.policy || first.taproot || parsed[1]?.taproot) {
     if (parsed.length === 2) throw new DescriptorError("paste a miniscript wallet as one descriptor, with <receive;change> steps");
     return miniscriptWallet(first);
   }
@@ -337,11 +427,12 @@ export function parseWallet(input: string): Wallet {
   return { script: first.script, sorted: first.sorted, threshold: first.threshold, keys, branches: { receive, change }, chain: [...chains][0], id };
 }
 
-/** A miniscript (Liana) wallet: every key with its own <receive;change> step. */
+/** A miniscript (Liana) wallet, P2WSH or Taproot: every key with its own <receive;change> step. */
 function miniscriptWallet(line: ParsedLine): Wallet {
-  const chains = new Set(line.keys.map((k) => k.chain));
+  const numsKey = line.taproot?.unspendable instanceof Uint8Array ? undefined : line.taproot?.unspendable;
+  const chains = new Set([...line.keys, ...(numsKey ? [numsKey] : [])].map((k) => k.chain));
   if (chains.size !== 1) throw new DescriptorError("the keys mix mainnet (xpub) and test (tpub) keys");
-  const keys: WalletKey[] = line.keys.map((k) => {
+  const walletKey = (k: ParsedKey): WalletKey => {
     const multi = k.steps.filter(Array.isArray);
     if (multi.length !== 1 || multi[0].length !== 2) {
       throw new DescriptorError(`key ${k.fingerprint}: every key needs one <receive;change> step, as /<0;1>/*`);
@@ -356,35 +447,123 @@ function miniscriptWallet(line: ParsedLine): Wallet {
       steps: k.steps.map((s) => (Array.isArray(s) ? "branch" : s)) as WalletKey["steps"],
       branches: { receive, change },
     };
-  });
+  };
+  const keys = line.keys.map(walletKey);
   // One key on several paths is fine, at other steps; the same public key twice is not.
   const paths = keys.flatMap((k) =>
     [k.branches.receive, k.branches.change].map((b) => `${k.xpub}/${k.steps.map((s) => (s === "branch" ? b : s)).join("/")}`),
   );
   if (new Set(paths).size !== paths.length) throw new DescriptorError("the same key is in the wallet twice");
+  const printKey = (k: WalletKey) => `${k.fingerprint}/${k.origin.join("/")}/${k.xpub}/${k.steps.join("/")}/${k.branches.receive};${k.branches.change}`;
+  const print = (ms: Miniscript) => printMiniscript(ms, (i) => printKey(keys[i]));
+  const base = { script: line.script, sorted: false, threshold: line.threshold, keys, branches: { receive: 0, change: 1 }, chain: [...chains][0] };
+  const idOf = (canonical: string[]) => hex.encode(sha256(new TextEncoder().encode(canonical.join("|")))).slice(0, 16);
+  if (line.taproot) {
+    const t = line.taproot;
+    const unspendable = t.unspendable instanceof Uint8Array ? t.unspendable : t.unspendable && walletKey(t.unspendable);
+    const printTree = (tree: TapTree): string => ("leaf" in tree ? print(tree.leaf) : `{${printTree(tree.left)},${printTree(tree.right)}}`);
+    // The unspendable key's origin, if written, is no one's: it is left out.
+    const nums = (k: WalletKey) => `${k.xpub}/${k.steps.join("/")}/${k.branches.receive};${k.branches.change}`;
+    const internal = t.internal !== null ? `key:${t.internal}` : unspendable instanceof Uint8Array ? "nums" : `nums:${nums(unspendable!)}`;
+    const id = idOf(["tr", internal, printTree(t.tree)]);
+    return { ...base, taproot: { internal: t.internal, unspendable, tree: t.tree, leaves: t.leaves }, id };
+  }
   const policy = line.policy!;
-  const canonical = [
-    line.script,
-    "miniscript",
-    printMiniscript(policy, (i) => {
-      const k = keys[i];
-      return `${k.fingerprint}/${k.origin.join("/")}/${k.xpub}/${k.steps.join("/")}/${k.branches.receive};${k.branches.change}`;
-    }),
-  ].join("|");
-  const id = hex.encode(sha256(new TextEncoder().encode(canonical))).slice(0, 16);
-  return { script: line.script, sorted: false, threshold: line.threshold, keys, policy, branches: { receive: 0, change: 1 }, chain: [...chains][0], id };
+  return { ...base, policy, id: idOf([line.script, "miniscript", print(policy)]) };
+}
+
+function deriveKey(wallet: Wallet, key: WalletKey, branch: number, index: number): Uint8Array {
+  // The wallet's receive or change branch, as this key has it.
+  const own = branch === wallet.branches.receive ? key.branches.receive : branch === wallet.branches.change ? key.branches.change : branch;
+  let node = key.hd;
+  for (const step of key.steps) node = node.deriveChild(step === "branch" ? own : step === "index" ? index : step);
+  if (!node.publicKey) throw new DescriptorError("could not derive a public key");
+  return node.publicKey;
 }
 
 /** The public keys of the wallet's address at (branch, index), in the descriptor's key order. */
 export function derivePubkeys(wallet: Wallet, branch: number, index: number): Uint8Array[] {
-  return wallet.keys.map((key) => {
-    // The wallet's receive or change branch, as this key has it.
-    const own = branch === wallet.branches.receive ? key.branches.receive : branch === wallet.branches.change ? key.branches.change : branch;
-    let node = key.hd;
-    for (const step of key.steps) node = node.deriveChild(step === "branch" ? own : step === "index" ? index : step);
-    if (!node.publicKey) throw new DescriptorError("could not derive a public key");
-    return node.publicKey;
-  });
+  return wallet.keys.map((key) => deriveKey(wallet, key, branch, index));
+}
+
+/** One script leaf of a Taproot address. */
+export interface TapLeaf {
+  ms: Miniscript;
+  script: Uint8Array;
+  leafHash: Uint8Array;
+  /** BIP 341's control block: leaf version and parity, the internal key, the hashes up the tree. */
+  controlBlock: Uint8Array;
+}
+
+export interface TaprootAddress {
+  /** The output script, OP_1 <32-byte key>. */
+  script: Uint8Array;
+  /** The internal key, x-only. */
+  internal: Uint8Array;
+  /** True if the internal key is a co-signer's: the address can be spent by the key path. */
+  keyPath: boolean;
+  /** The wallet's keys at this address, x-only, in the descriptor's order. */
+  xonly: Uint8Array[];
+  merkleRoot: Uint8Array;
+  /** The leaves, in the descriptor's order. */
+  leaves: TapLeaf[];
+}
+
+export const TAPSCRIPT_LEAF = 0xc0;
+const tagged = schnorr.utils.taggedHash;
+
+function compactSize(n: number): number[] {
+  return n < 0xfd ? [n] : [0xfd, n & 0xff, n >> 8];
+}
+
+/** BIP 341's leaf hash of a Tapscript leaf. */
+export const tapLeafHash = (script: Uint8Array): Uint8Array =>
+  tagged("TapLeaf", Uint8Array.of(TAPSCRIPT_LEAF, ...compactSize(script.length)), script);
+
+/** BIP 341's hash of a tree branch: its two children's hashes, the smaller first. */
+export const tapBranch = (a: Uint8Array, b: Uint8Array): Uint8Array =>
+  compare(a, b) <= 0 ? tagged("TapBranch", a, b) : tagged("TapBranch", b, a);
+
+/** The Taproot address at (branch, index): its key, its leaves with their control blocks. */
+export function deriveTaproot(wallet: Wallet, branch: number, index: number): TaprootAddress {
+  const t = wallet.taproot;
+  if (!t) throw new DescriptorError("not a Taproot wallet");
+  const xonly = derivePubkeys(wallet, branch, index).map((p) => p.subarray(1));
+  const internal = t.internal !== null ? xonly[t.internal]
+    : t.unspendable instanceof Uint8Array ? t.unspendable
+    : deriveKey(wallet, t.unspendable!, branch, index).subarray(1);
+  const scripts = t.leaves.map((ms) => compile(ms, xonly));
+  const hashes = scripts.map(tapLeafHash);
+  const paths: Uint8Array[][] = scripts.map(() => []);
+  let next = 0;
+  // Each leaf's path: its siblings' hashes, from the leaf up to the root.
+  const walk = (tree: TapTree): { hash: Uint8Array; leaves: number[] } => {
+    if ("leaf" in tree) {
+      const i = next++;
+      return { hash: hashes[i], leaves: [i] };
+    }
+    const l = walk(tree.left);
+    const r = walk(tree.right);
+    for (const i of l.leaves) paths[i].push(r.hash);
+    for (const i of r.leaves) paths[i].push(l.hash);
+    return { hash: tapBranch(l.hash, r.hash), leaves: [...l.leaves, ...r.leaves] };
+  };
+  const merkleRoot = walk(t.tree).hash;
+  const [q, parity] = btcUtils.taprootTweakPubkey(internal, merkleRoot);
+  const leaves = t.leaves.map((ms, i) => ({
+    ms,
+    script: scripts[i],
+    leafHash: hashes[i],
+    controlBlock: Uint8Array.from([TAPSCRIPT_LEAF | parity, ...internal, ...paths[i].flatMap((h) => [...h])]),
+  }));
+  return { script: Uint8Array.of(0x51, 0x20, ...q), internal, keyPath: t.internal !== null, xonly, merkleRoot, leaves };
+}
+
+/** The ways to spend from the wallet: a Taproot wallet's key path, if it has one, then its leaves'. */
+export function walletSpendPaths(w: Wallet): SpendPath[] {
+  if (!w.taproot) return spendPaths(w.policy!);
+  const key: SpendPath[] = w.taproot.internal !== null ? [{ groups: [{ k: 1, keys: [w.taproot.internal] }], older: [], after: [] }] : [];
+  return [...key, ...w.taproot.leaves.flatMap(spendPaths)];
 }
 
 function compare(a: Uint8Array, b: Uint8Array): number {
@@ -394,6 +573,8 @@ function compare(a: Uint8Array, b: Uint8Array): number {
 
 /** The wallet's output script and witness script at (branch, index). */
 export function deriveScript(wallet: Wallet, branch: number, index: number): { script: Uint8Array; witnessScript: Uint8Array } {
+  // A Taproot address has no one witness script: see deriveTaproot.
+  if (wallet.taproot) return { script: deriveTaproot(wallet, branch, index).script, witnessScript: new Uint8Array() };
   let pubkeys = derivePubkeys(wallet, branch, index);
   if (wallet.policy) {
     const witnessScript = compile(wallet.policy, pubkeys);
@@ -415,7 +596,7 @@ export const fingerprints = (wallet: Wallet): string[] => [...new Set(wallet.key
  * by scanning it as a `ur:bytes` QR). Those devices take only sorted keys on branches 0 and 1, so other wallets throw.
  */
 export function coldcardFile(w: Wallet): string {
-  if (w.policy) throw new DescriptorError("hardware wallets import a Liana wallet from Liana itself, not as a multisig file");
+  if (w.policy || w.taproot) throw new DescriptorError("hardware wallets import a Liana wallet from Liana itself, not as a multisig file");
   if (!w.sorted) throw new DescriptorError("hardware wallets import only sortedmulti wallets, and this one is multi");
   if (w.branches.receive !== 0 || w.branches.change !== 1 || w.keys.some((k) => k.steps.join() !== "branch,index")) {
     throw new DescriptorError("hardware wallets import only wallets whose keys end in /<0;1>/*");
