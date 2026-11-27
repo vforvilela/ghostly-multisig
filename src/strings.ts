@@ -100,6 +100,15 @@ export const en = {
   dismiss: "Dismiss",
 
   footer: "Multisig never signs and never sees a private key. Check every amount and address on your hardware wallet's screen before you sign.",
+  showQr: "Show as QR codes",
+  hideQr: "Hide the QR codes",
+  qrHelp: "For Passport, Keystone, Jade or Sparrow: scan the moving QR code until the signer has every part. Then save the signed PSBT to microSD and open the file below.",
+  qrLabel: "The PSBT as an animated QR code",
+  qrPart: "Part {n} of {count}",
+  openFile: "Open a file…",
+  walletQr: "Wallet for a hardware signer",
+  walletQrLabel: "The wallet as a QR code",
+  walletQrHelp: "Passport, Keystone, Jade, Coldcard Q: import the multisig wallet by scanning this. It holds public keys only. Check on the device that it shows the same fingerprints as above.",
 };
 
 export type Strings = typeof en;
@@ -187,6 +196,15 @@ export const pt: Partial<Strings> = {
   n_sendFailed: "Não foi possível enviar. Vai quando seu contato abrir o Multisig.",
   dismiss: "Fechar",
   footer: "O Multisig nunca assina e nunca vê uma chave privada. Confira cada valor e endereço na tela da sua carteira de hardware antes de assinar.",
+  showQr: "Mostrar como QR codes",
+  hideQr: "Esconder os QR codes",
+  qrHelp: "Para Passport, Keystone, Jade ou Sparrow: escaneie o QR code animado até o aparelho ter todas as partes. Depois salve o PSBT assinado no microSD e abra o arquivo abaixo.",
+  qrLabel: "O PSBT como QR code animado",
+  qrPart: "Parte {n} de {count}",
+  openFile: "Abrir um arquivo…",
+  walletQr: "Carteira para um aparelho",
+  walletQrLabel: "A carteira como QR code",
+  walletQrHelp: "Passport, Keystone, Jade, Coldcard Q: importe a carteira multisig escaneando isto. Só tem chaves públicas. Confira no aparelho que ele mostra as mesmas impressões digitais de cima.",
 };
 
 export const es: Partial<Strings> = {
@@ -271,6 +289,15 @@ export const es: Partial<Strings> = {
   n_sendFailed: "No se pudo enviar. Se enviará cuando tu contacto abra Multisig.",
   dismiss: "Cerrar",
   footer: "Multisig nunca firma y nunca ve una clave privada. Revisa cada monto y dirección en la pantalla de tu billetera de hardware antes de firmar.",
+  showQr: "Mostrar como códigos QR",
+  hideQr: "Ocultar los códigos QR",
+  qrHelp: "Para Passport, Keystone, Jade o Sparrow: escanea el código QR animado hasta que el dispositivo tenga todas las partes. Luego guarda el PSBT firmado en la microSD y abre el archivo abajo.",
+  qrLabel: "El PSBT como código QR animado",
+  qrPart: "Parte {n} de {count}",
+  openFile: "Abrir un archivo…",
+  walletQr: "Billetera para un dispositivo",
+  walletQrLabel: "La billetera como código QR",
+  walletQrHelp: "Passport, Keystone, Jade, Coldcard Q: importa la billetera multisig escaneando esto. Solo tiene claves públicas. Comprueba en el dispositivo que muestra las mismas huellas de arriba.",
 };
 
 const TABLES: Record<Language, Partial<Strings>> = { en, pt, es };

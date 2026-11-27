@@ -320,3 +320,23 @@ export function deriveScript(wallet: Wallet, branch: number, index: number): { s
 
 /** `a-b-c` key labels: each key's fingerprint, the way coordinators show them. */
 export const fingerprints = (wallet: Wallet): string[] => wallet.keys.map((k) => k.fingerprint);
+
+/**
+ * The wallet as Coldcard's multisig setup file, the text Passport, Keystone and Coldcard import (Keystone and Passport
+ * by scanning it as a `ur:bytes` QR). Those devices take only sorted keys on branches 0 and 1, so other wallets throw.
+ */
+export function coldcardFile(w: Wallet): string {
+  if (!w.sorted) throw new DescriptorError("hardware wallets import only sortedmulti wallets, and this one is multi");
+  if (w.branches.receive !== 0 || w.branches.change !== 1 || w.keys.some((k) => k.steps.join() !== "branch,index")) {
+    throw new DescriptorError("hardware wallets import only wallets whose keys end in /<0;1>/*");
+  }
+  const path = (origin: number[]) => ["m", ...origin.map((n) => (n >= HARDENED ? `${n - HARDENED}'` : String(n)))].join("/");
+  const lines = [
+    "# Multisig setup file (Coldcard format), from Ghostly Multisig",
+    `Name: ghostly-${w.id.slice(0, 8)}`,
+    `Policy: ${w.threshold} of ${w.keys.length}`,
+    `Format: ${w.script === "wsh" ? "P2WSH" : "P2SH-P2WSH"}`,
+  ];
+  for (const k of w.keys) lines.push("", `Derivation: ${path(k.origin)}`, `${k.fingerprint.toUpperCase()}: ${k.xpub}`);
+  return `${lines.join("\n")}\n`;
+}

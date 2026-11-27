@@ -75,3 +75,25 @@ test("fits a phone without sideways scrolling", async ({ browser }) => {
   expect(width[0]).toBeLessThanOrEqual(width[1]);
   for (const side of [ana, bob]) await side.context.close();
 });
+
+test("air-gapped signer: the PSBT and the wallet as moving QR codes, the signed copy back from a file", async ({ browser }) => {
+  const [ana, bob] = await chatPair(browser, "frame");
+  const f = ana.frame;
+  await setWallet(ana);
+  await f.getByRole("button", { name: "Wallet for a hardware signer" }).click();
+  await expect(f.getByRole("img", { name: "The wallet as a QR code" })).toBeVisible();
+
+  await paste(f, "PSBT to read", fixture("1-alice.psbt"));
+  await f.getByRole("button", { name: "Show as QR codes" }).click();
+  const qr = f.getByRole("img", { name: "The PSBT as an animated QR code" });
+  await expect(qr).toBeVisible();
+  await expect(f.locator(".qr-caption").last()).toHaveText(/^Part \d+ of \d+$/);
+  const first = await qr.locator("path").getAttribute("d");
+  await expect.poll(() => qr.locator("path").getAttribute("d")).not.toBe(first);
+
+  // The co-signer's device saved its signed PSBT to microSD, as binary.
+  await f.locator('input[type="file"]').setInputFiles({ name: "signed.psbt", mimeType: "application/octet-stream", buffer: Buffer.from(fixture("1-bob.psbt"), "base64") });
+  await expect(f.getByText("Fully signed")).toBeVisible();
+  expect(await violations(f)).toEqual([]);
+  for (const side of [ana, bob]) await side.context.close();
+});

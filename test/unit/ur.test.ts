@@ -57,3 +57,35 @@ test("not a UR, or parts of two URs, said plainly", () => {
   const b = u.cases.signedCore.parts[1];
   expect(() => urDecode(`${a}\n${b}`)).toThrow(/^parts of different URs$/);
 });
+
+describe("the app reads what air-gapped signers give back", () => {
+  test("pasted UR text and a microSD file, binary or text, read as the PSBT", async () => {
+    const { readPsbt, decodePsbt, psbtFile, toBase64 } = await import("../../src/psbt.ts");
+    const parts = u.cases.signedTrezor.parts;
+    expect(toBase64(readPsbt(parts.join("\n")))).toBe(v.signedTrezor);
+    const bin = base64.decode(v.signedTrezor);
+    expect(toBase64(readPsbt(psbtFile(bin)))).toBe(v.signedTrezor);
+    expect(toBase64(readPsbt(psbtFile(new TextEncoder().encode(`${v.signedTrezor}\n`))))).toBe(v.signedTrezor);
+    expect(() => decodePsbt(urEncoder("bytes", new Uint8Array(20)).part(1))).toThrow(/^QR text of a bytes, not a PSBT/);
+    expect(() => decodePsbt(parts.slice(2).join(" ").slice(0, 400))).toThrow(/^QR text that could not be read/);
+    expect(() => psbtFile(new Uint8Array(200_001))).toThrow(/too long/);
+  });
+});
+
+describe("the wallet for a hardware signer (Coldcard's multisig file)", () => {
+  test("signing.json's wallet: policy, format, each key's path and xpub", async () => {
+    const { coldcardFile, parseWallet } = await import("../../src/descriptor.ts");
+    const w = parseWallet(v.descriptor);
+    const text = coldcardFile(w);
+    expect(text).toMatch(new RegExp(`^# .*\\nName: ghostly-${w.id.slice(0, 8)}\\nPolicy: 2 of 3\\nFormat: P2WSH\\n`));
+    for (const k of w.keys) expect(text).toContain(`\nDerivation: m/48'/1'/0'/2'\n${k.fingerprint.toUpperCase()}: ${k.xpub}\n`);
+    // As a QR: one ur:bytes part that reads back to the same text.
+    const enc = urEncoder("bytes", new TextEncoder().encode(text), 200);
+    expect(new TextDecoder().decode(urDecode(Array.from({ length: enc.count }, (_, i) => enc.part(i + 1)).join("\n")).data)).toBe(text);
+  });
+
+  test("refused for a wallet these devices cannot hold", async () => {
+    const { coldcardFile, parseWallet } = await import("../../src/descriptor.ts");
+    expect(() => coldcardFile(parseWallet(v.descriptor.replace("sortedmulti", "multi").replace(/#\w+$/, "")))).toThrow(/only sortedmulti/);
+  });
+});

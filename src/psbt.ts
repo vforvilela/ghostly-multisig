@@ -5,6 +5,7 @@
  */
 import { Address, NETWORK, OutScript, TEST_NETWORK, Transaction, p2sh, p2wsh } from "@scure/btc-signer";
 import { base64, hex } from "@scure/base";
+import { urDecode } from "./ur.ts";
 import { secp256k1 } from "@noble/curves/secp256k1.js";
 import { deriveScript, derivePubkeys, type Wallet } from "./descriptor.ts";
 
@@ -25,6 +26,18 @@ const OPTS = { allowUnknownOutputs: true, allowUnknown: true } as const;
 
 /** The PSBT in base64 (as coordinators copy it) or hex. */
 export function decodePsbt(text: string): Uint8Array {
+  // The text of an air-gapped signer's QR codes: ur:crypto-psbt, one part or all of them.
+  if (/^\s*ur:/i.test(text)) {
+    if (text.length > 4 * MAX_PSBT_TEXT) throw new PsbtError("too long to be a PSBT");
+    let ur: { type: string; data: Uint8Array };
+    try {
+      ur = urDecode(text);
+    } catch (e) {
+      throw new PsbtError(`QR text that could not be read: ${(e as Error).message}`);
+    }
+    if (ur.type !== "crypto-psbt") throw new PsbtError(`QR text of a ${ur.type}, not a PSBT (crypto-psbt)`);
+    return ur.data;
+  }
   const clean = text.replace(/\s+/g, "");
   if (!clean) throw new PsbtError("paste a PSBT");
   if (clean.length > MAX_PSBT_TEXT) throw new PsbtError("too long to be a PSBT");
@@ -98,6 +111,17 @@ function psbtVersion(bytes: Uint8Array): number | null {
 }
 
 export const toBase64 = (tx: Transaction): string => base64.encode(tx.toPSBT());
+
+/**
+ * A file's bytes, as a signer saves a PSBT to microSD: binary (Passport, Keystone, Coldcard, Sparrow's .psbt) or text
+ * (base64, hex or UR). The caller reads at most MAX_PSBT_TEXT + 1 bytes, so a huge file reads as "too long".
+ */
+export function psbtFile(bytes: Uint8Array): string | Uint8Array {
+  if (bytes.length > MAX_PSBT_TEXT) throw new PsbtError("too long to be a PSBT");
+  const magic = [0x70, 0x73, 0x62, 0x74, 0xff];
+  if (magic.every((b, i) => bytes[i] === b)) return bytes;
+  return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+}
 
 /**
  * A copy of the same transaction with more signatures: the signatures of both. Refuses a different transaction.

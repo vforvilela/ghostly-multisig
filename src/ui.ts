@@ -9,7 +9,9 @@ import type { MultisigController, State } from "./app.ts";
 import type { OutputInfo, Summary, Warning } from "./psbt.ts";
 import type { Network } from "./psbt.ts";
 import { fill, type Strings } from "./strings.ts";
-import { toBase64 } from "./psbt.ts";
+import { MAX_PSBT_TEXT, toBase64 } from "./psbt.ts";
+import { coldcardFile } from "./descriptor.ts";
+import { QrPanel } from "./qr.ts";
 
 type Child = Node | string | null | undefined | false;
 
@@ -70,10 +72,23 @@ export function mountMultisig(root: HTMLElement, app: MultisigController, s: Str
   const raw = h("textarea", { rows: "3", readonly: "", spellcheck: "false", "aria-label": s.rawBox, class: "mono" });
   selectAllOnFocus(raw);
   let editingWallet = false;
+  // Air-gapped signers: the PSBT and the wallet as animated QR codes, and a signed PSBT back from a microSD file.
+  let showQr = false;
+  let showWalletQr = false;
+  const partOf = (n: number, count: number) => fill(s.qrPart, { n, count });
+  const psbtQr = new QrPanel(s.qrLabel, partOf);
+  const walletQr = new QrPanel(s.walletQrLabel, partOf);
+  const fileIn = h("input", { type: "file", accept: ".psbt,.txt,text/plain,application/octet-stream", hidden: "", "aria-label": s.openFile });
+  fileIn.addEventListener("change", () => {
+    const file = fileIn.files?.[0];
+    fileIn.value = "";
+    if (file) void file.slice(0, MAX_PSBT_TEXT + 1).arrayBuffer().then((b) => app.paste(new Uint8Array(b)));
+  });
+  const openFile = () => button(s.openFile, () => fileIn.click());
 
   const live = h("div", { class: "notice", role: "status", "aria-live": "polite" });
   const body = h("main", { class: "app" });
-  root.replaceChildren(body);
+  root.replaceChildren(body, fileIn);
 
   const redraw = (state: State) => {
     if (!state.ready) {
@@ -115,8 +130,20 @@ export function mountMultisig(root: HTMLElement, app: MultisigController, s: Str
           descriptor.value = state.descriptor;
           redraw(app.state);
         }),
+        button(showWalletQr ? s.hideQr : s.walletQr, () => {
+          showWalletQr = !showWalletQr;
+          redraw(app.state);
+        }),
       );
       sec.append(row);
+      if (showWalletQr) {
+        try {
+          const file = new TextEncoder().encode(coldcardFile(w));
+          sec.append(h("p", { class: "muted small" }, s.walletQrHelp), walletQr.show("bytes", file));
+        } catch (e) {
+          sec.append(h("p", { class: "warn small" }, (e as Error).message));
+        }
+      } else walletQr.stop();
       return sec;
     }
     sec.append(h("p", { class: "muted small" }, s.walletHelp), descriptor);
@@ -156,7 +183,7 @@ export function mountMultisig(root: HTMLElement, app: MultisigController, s: Str
     const sec = h("section", { class: "card", "aria-labelledby": "tx-h" }, h("h2", { id: "tx-h" }, s.txHeading));
     const current = state.current;
     if (!current) {
-      sec.append(h("p", { class: "muted small" }, s.pasteHelp), firstPaste.area, h("div", { class: "row" }, firstPaste.go));
+      sec.append(h("p", { class: "muted small" }, s.pasteHelp), firstPaste.area, h("div", { class: "row" }, firstPaste.go, openFile()));
       return sec;
     }
     if (!current.summary) sec.append(h("p", { class: "warn" }, s.needWallet));
@@ -186,12 +213,24 @@ export function mountMultisig(root: HTMLElement, app: MultisigController, s: Str
         h("h3", {}, s.copyHeading),
         h("p", { class: "muted small" }, s.copyHelp),
         copyOut,
+        h(
+          "div",
+          { class: "row" },
+          button(showQr ? s.hideQr : s.showQr, () => {
+            showQr = !showQr;
+            redraw(app.state);
+          }),
+        ),
+      );
+      if (showQr) sec.append(h("p", { class: "muted small" }, s.qrHelp), psbtQr.show("crypto-psbt", current.tx.toPSBT()));
+      sec.append(
         h("h3", {}, s.pasteSigned),
         h("p", { class: "muted small" }, s.pasteSignedHelp),
         signedPaste.area,
-        h("div", { class: "row" }, signedPaste.go),
+        h("div", { class: "row" }, signedPaste.go, openFile()),
       );
     }
+    if (rawHex || !showQr) psbtQr.stop();
     sec.append(h("div", { class: "row end" }, button(s.done, () => void app.clear())));
     return sec;
   }

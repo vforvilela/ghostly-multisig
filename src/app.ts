@@ -9,7 +9,7 @@
  */
 import type { MiniAppApi, MiniAppJson, MiniAppPeerEvent } from "./vendor/miniApp.ts";
 import { DescriptorError, caravanWallet, parseWallet, type Wallet } from "./descriptor.ts";
-import { PsbtError, combine, finalise, readPsbt, stripInvalid, summarise, toBase64, type Network, type Summary } from "./psbt.ts";
+import { PsbtError, combine, psbtFile, finalise, readPsbt, stripInvalid, summarise, toBase64, type Network, type Summary } from "./psbt.ts";
 import { Reassembler, chunk, frame, parseMessage, type Message } from "./protocol.ts";
 import type { Transaction } from "@scure/btc-signer";
 
@@ -191,14 +191,15 @@ export class MultisigController {
   }
 
   /** A PSBT the person pasted from their coordinator. */
-  paste(text: string): Promise<void> {
+  /** A PSBT as text (base64, hex, UR) or as a file's bytes. */
+  paste(text: string | Uint8Array): Promise<void> {
     return this.queue(() => this.pasteNow(text));
   }
 
-  private async pasteNow(text: string): Promise<void> {
+  private async pasteNow(text: string | Uint8Array): Promise<void> {
     let tx: Transaction;
     try {
-      tx = readPsbt(text);
+      tx = readPsbt(typeof text === "string" ? text : psbtFile(text));
     } catch (e) {
       this.emit({ notice: { k: "bad-psbt", why: e instanceof PsbtError ? e.message : String(e) } });
       return;
