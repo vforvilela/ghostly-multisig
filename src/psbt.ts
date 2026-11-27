@@ -315,7 +315,7 @@ function placeOf(wallet: Wallet, derivation: Derivation | undefined): { branch: 
 
 const same = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((x, i) => x === b[i]);
 
-function addressOf(script: Uint8Array, network: Network): string {
+export function addressOf(script: Uint8Array, network: Network): string {
   try {
     const decoded = OutScript.decode(script);
     if (decoded.type === "unknown") return "script";

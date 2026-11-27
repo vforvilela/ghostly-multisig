@@ -5,12 +5,14 @@
 //   2. Caravan's v0 -> v2 conversion of the bare PSBT: the app must refuse it with its version message.
 //   3. Caravan's signature round trip: it lifts the Trezor's signatures out of its PSBT and adds them to the bare one,
 //      as Caravan does with a signature set; the app must read that copy and finish Core's transaction from it.
+//   4. Caravan's wallet files (its own fixtures, test/vectors/caravan/, and one for signing.json's wallet): Caravan's
+//      braid code gives the first receive and change addresses; the app, reading the file, must derive the same.
 //
 //   node scripts/interop/caravan.mjs <a node_modules folder holding @caravan/psbt and @caravan/bitcoin>
 //
 // Node 24 runs the app's TypeScript directly (type stripping), so this needs no build.
 import { createRequire } from "node:module";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { base64, hex } from "@scure/base";
 import { combine, readPsbt } from "../../src/psbt.ts";
@@ -21,7 +23,7 @@ const require = createRequire(resolve(modules, "..", "x.js"));
 const psbtPkg = require("@caravan/psbt");
 const bitcoinPkg = require("@caravan/bitcoin");
 const { PsbtV2, validateMultisigPsbtSignature, getPsbtVersionNumber } = psbtPkg;
-const { addSignaturesToPSBT, parseSignaturesFromPSBT } = bitcoinPkg;
+const { addSignaturesToPSBT, parseSignaturesFromPSBT, generateBraid, deriveMultisigByIndex } = bitcoinPkg;
 const version = (name) => JSON.parse(readFileSync(resolve(modules, name, "package.json"), "utf8")).version;
 const v = JSON.parse(readFileSync(new URL("../../test/vectors/signing.json", import.meta.url), "utf8"));
 
@@ -50,12 +52,41 @@ if (sets.length !== merged.inputsLength || sets.some(([, s]) => s.length !== 1))
 const caravanSigned = addSignaturesToPSBT("regtest", v.unsigned, sets.map(([k]) => Buffer.from(k, "hex")), sets.map(([, [s]]) => Buffer.from(s, "hex")));
 if (!caravanSigned) throw new Error("Caravan could not add the signatures");
 
+// 4. Wallet files. Caravan's coordinator turns each file key into { base58String, path, rootFingerprint }.
+const ADDRESSES = 3;
+function caravanAddresses(config) {
+  const keys = config.extendedPublicKeys.map((k) => ({ base58String: k.xpub, path: k.bip32Path, rootFingerprint: k.xfp }));
+  const branch = (b) => {
+    const braid = generateBraid(config.network, config.addressType, keys, config.quorum.requiredSigners, String(b));
+    return Array.from({ length: ADDRESSES }, (_, i) => deriveMultisigByIndex(braid, i).address);
+  };
+  return { receive: branch(0), change: branch(1) };
+}
+const ownKeys = [...v.descriptor.matchAll(/\[([0-9a-f]{8})\/([^\]]+)\](tpub\w+)/g)];
+const ownConfig = {
+  name: "ghostly signing.json",
+  addressType: "P2WSH",
+  network: "regtest",
+  client: { type: "public" },
+  quorum: { requiredSigners: 2, totalSigners: ownKeys.length },
+  extendedPublicKeys: ownKeys.map(([, xfp, path, xpub], n) => ({ name: `key ${n + 1}`, bip32Path: `m/${path.replaceAll("h", "'")}`, xpub, xfp })),
+  startingAddressIndex: 0,
+};
+const folder = new URL("../../test/vectors/caravan/", import.meta.url);
+const wallets = { "signing.json": { config: ownConfig, ...caravanAddresses(ownConfig) } };
+for (const file of readdirSync(folder).sort()) {
+  const config = JSON.parse(readFileSync(new URL(file, folder), "utf8"));
+  if (config.addressType === "P2SH") continue; // legacy: the app refuses it, nothing to compare
+  wallets[file] = caravanAddresses(config);
+}
+
 const doc = {
   source: `@caravan/psbt ${version("@caravan/psbt")}, @caravan/bitcoin ${version("@caravan/bitcoin")} on signing.json's spend`,
   generated: new Date().toISOString().slice(0, 10),
   validated: { psbt: mergedB64, signatures: checked },
   v2,
   caravanSigned,
+  wallets,
 };
 writeFileSync(new URL("../../test/vectors/caravan.json", import.meta.url), `${JSON.stringify(doc, null, 1)}\n`);
-console.log(`wrote caravan.json: Caravan validated ${checked} signatures in the app's merge`);
+console.log(`wrote caravan.json: Caravan validated ${checked} signatures in the app's merge; addresses for ${Object.keys(wallets).length} wallet files`);

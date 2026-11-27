@@ -153,6 +153,16 @@ describe("controller", () => {
     expect(ca.state.wallet).toBeNull();
   });
 
+  it("takes Caravan's wallet file: kept as its descriptor, on the network the file names", async () => {
+    const { ca } = await pair(false, false);
+    const file = readFileSync(new URL("../vectors/caravan/bitcoin-2-of-2-P2WSH_MAINNET.json", import.meta.url), "utf8");
+    expect(await ca.setWallet(file, "test")).toBe(true);
+    expect(ca.state.descriptor).toMatch(/^wsh\(sortedmulti\(2,\[00000006\/48h\/0h\/100h\/2h\]xpub/);
+    expect(ca.state.network).toBe("main");
+    expect(await ca.setWallet(readFileSync(new URL("../vectors/caravan/bitcoin-2-of-2-P2SH_MAINNET.json", import.meta.url), "utf8"), "test")).toBe(false);
+    expect(ca.state.notice).toEqual({ k: "bad-wallet", why: "Caravan P2SH wallets are not supported: only P2WSH and P2SH-P2WSH" });
+  });
+
   it("holds a PSBT received before a wallet is set, and reads it once one is", async () => {
     const { a, b, ca, cb } = await pair(true, false);
     await ca.paste(fixture("0-unsigned.psbt"));

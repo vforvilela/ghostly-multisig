@@ -6,6 +6,8 @@ What each published version of Multisig changed, newest first. A version is publ
 ## Unreleased (0.1.0)
 
 - Reads `wsh` and `sh(wsh)` multisig descriptors (`multi` and `sortedmulti`, 2-15 keys), checksum checked.
+- Reads Caravan's wallet file (P2WSH and P2SH-P2WSH) as the `sortedmulti` descriptor it describes, on the network
+  it names; its addresses match Caravan's own for Caravan's fixture wallets. Legacy P2SH is refused.
 - Reads a PSBT in base64 or hex and shows outputs, change (re-derived from the descriptor), fee and sat/vB, inputs,
   and who has signed. Warns on foreign inputs, fake change, missing or mismatched amounts, sighash other than ALL,
   a high fee, and no change back.

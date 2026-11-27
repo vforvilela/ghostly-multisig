@@ -8,6 +8,8 @@
  * Every key needs its origin, as the PSBT's derivation paths are matched against it. SLIP-132 prefixes (Zpub, Vpub...)
  * are read as xpub/tpub. A `#checksum` is checked when present. The descriptor holds public keys only.
  *
+ * Caravan's wallet file (JSON) is read as the descriptor it describes (caravanWallet).
+ *
  * The wallet is the person's own, pasted from their coordinator: it is never taken from the contact (see docs/protocol.md).
  */
 import { HDKey } from "@scure/bip32";
@@ -190,7 +192,47 @@ function parseLine(raw: string): ParsedLine {
 }
 
 /** The wallet from a pasted descriptor: one line with `<0;1>`, or two lines (receive /0/*, change /1/*). Lines starting with `#` are comments. */
+/**
+ * Caravan's wallet file ("Download wallet details"): its quorum, address type and keys, each with `xfp` and
+ * `bip32Path`. Caravan sorts the keys (BIP 67) and derives receive from branch 0, change from branch 1, so the file
+ * is the descriptor `sortedmulti(k, [xfp/path]xpub/<0;1>/*, ...)`. Null when the text is not a JSON object.
+ */
+export function caravanWallet(input: string): { descriptor: string; network: "main" | "test" | "regtest" } | null {
+  const text = input.trim();
+  if (!text.startsWith("{")) return null;
+  let c: unknown;
+  try {
+    c = JSON.parse(text);
+  } catch {
+    throw new DescriptorError("not a wallet file this app can read: paste the output descriptor or Caravan's wallet file");
+  }
+  const o = c as { addressType?: unknown; network?: unknown; quorum?: { requiredSigners?: unknown; totalSigners?: unknown }; extendedPublicKeys?: unknown };
+  if (!Array.isArray(o.extendedPublicKeys) || typeof o.quorum !== "object" || o.quorum === null) {
+    throw new DescriptorError("not a Caravan wallet file: it has no quorum and extendedPublicKeys");
+  }
+  const wrap = o.addressType === "P2WSH" ? (m: string) => `wsh(${m})` : o.addressType === "P2SH-P2WSH" ? (m: string) => `sh(wsh(${m}))` : null;
+  if (!wrap) throw new DescriptorError(`Caravan ${String(o.addressType)} wallets are not supported: only P2WSH and P2SH-P2WSH`);
+  const network = ({ mainnet: "main", testnet: "test", signet: "test", regtest: "regtest" } as const)[String(o.network) as "mainnet"];
+  if (!network) throw new DescriptorError(`a Caravan wallet on an unknown network: ${String(o.network)}`);
+  const keys = (o.extendedPublicKeys as { name?: unknown; xfp?: unknown; bip32Path?: unknown; xpub?: unknown }[]).map((k, n) => {
+    const who = typeof k.name === "string" && k.name ? `"${k.name}"` : `${n + 1}`;
+    const xfp = typeof k.xfp === "string" ? k.xfp.toLowerCase() : "";
+    const path = typeof k.bip32Path === "string" ? k.bip32Path : "";
+    if (!/^[0-9a-f]{8}$/.test(xfp) || !/^m(\/\d+['h]?)*$/.test(path)) {
+      throw new DescriptorError(`key ${who} has no fingerprint and path in the Caravan file: add them in Caravan, then download the file again`);
+    }
+    if (typeof k.xpub !== "string") throw new DescriptorError(`key ${who} has no xpub in the Caravan file`);
+    return `[${xfp}${path.slice(1).replaceAll("'", "h")}]${k.xpub}/<0;1>/*`;
+  });
+  if (o.quorum.totalSigners !== keys.length) throw new DescriptorError("the Caravan file's quorum does not match its keys");
+  const threshold = o.quorum.requiredSigners;
+  if (!Number.isSafeInteger(threshold)) throw new DescriptorError("the Caravan file has no number of required signers");
+  return { descriptor: wrap(`sortedmulti(${threshold as number},${keys.join(",")})`), network };
+}
+
 export function parseWallet(input: string): Wallet {
+  const caravan = caravanWallet(input);
+  if (caravan) return parseWallet(caravan.descriptor);
   const lines = input.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
   if (lines.length === 0) throw new DescriptorError("paste the wallet's output descriptor");
   if (lines.length > 2) throw new DescriptorError("paste one descriptor (or its receive and change lines)");

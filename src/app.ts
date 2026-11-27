@@ -8,7 +8,7 @@
  * - A PSBT is sent only when the person presses Send. If the contact's app is closed it waits and goes when it opens.
  */
 import type { MiniAppApi, MiniAppJson, MiniAppPeerEvent } from "./vendor/miniApp.ts";
-import { DescriptorError, parseWallet, type Wallet } from "./descriptor.ts";
+import { DescriptorError, caravanWallet, parseWallet, type Wallet } from "./descriptor.ts";
 import { PsbtError, combine, finalise, readPsbt, stripInvalid, summarise, toBase64, type Network, type Summary } from "./psbt.ts";
 import { Reassembler, chunk, frame, parseMessage, type Message } from "./protocol.ts";
 import type { Transaction } from "@scure/btc-signer";
@@ -160,15 +160,18 @@ export class MultisigController {
 
   private async setWalletNow(descriptor: string, network: Network): Promise<boolean> {
     let wallet: Wallet;
+    let text = descriptor.trim();
     try {
-      wallet = parseWallet(descriptor);
+      // A Caravan wallet file is kept as the descriptor it describes, on the network it names.
+      const caravan = caravanWallet(text);
+      if (caravan) [text, network] = [caravan.descriptor, caravan.network];
+      wallet = parseWallet(text);
     } catch (e) {
       this.emit({ notice: { k: "bad-wallet", why: e instanceof DescriptorError ? e.message : String(e) } });
       return false;
     }
     if (wallet.chain === "main") network = "main";
     else if (network === "main") network = "test";
-    const text = descriptor.trim();
     await this.api.storage.set(KEY_WALLET, { d: text, net: network });
     this.state = { ...this.state, wallet, descriptor: text, network, notice: null };
     this.resummarise();

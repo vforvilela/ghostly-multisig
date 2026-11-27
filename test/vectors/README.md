@@ -12,7 +12,8 @@ files and need no node or network; the scripts regenerate the generated ones.
 | `signing.json` | a regtest spend: Bitcoin Core (key A), sparrowwallet/drongo `Wallet.sign` (key B), Trezor Model T emulator 2.13.1 via HWI (key C) | test data, no keys of value | `scripts/interop/signing.mjs` |
 | `electrum.json` | `signing.json`'s spend signed by Electrum 4.8.4 (`Multisig_Wallet.sign_transaction`), finalised by Core | test data | `scripts/interop/electrum.mjs` |
 | `hardware.json` | regtest spends of 2-of-3s with Core: Coldcard, BitBox02, Ledger (app-bitcoin 2.5.0, Speculos) and Jade 1.0.36 (QEMU) simulators via HWI 3.2.0, each mined by Core | test data | `scripts/interop/hardware.mjs` |
-| `caravan.json` | `@caravan/psbt` 2.1.2 and `@caravan/bitcoin` 0.4.7 on `signing.json`'s spend | test data | `scripts/interop/caravan.mjs` |
+| `caravan.json` | `@caravan/psbt` 2.1.2 and `@caravan/bitcoin` 0.4.7 on `signing.json`'s spend, and the first addresses of each wallet file in `caravan/` | test data | `scripts/interop/caravan.mjs` |
+| `caravan/*.json` | Caravan's wallet-file fixtures, caravan-bitcoin/caravan `dff6283` (`apps/coordinator/fixtures/caravan/`) | MIT | copied |
 
 ## Regenerating
 
