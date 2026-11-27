@@ -7,7 +7,8 @@ import { Address, NETWORK, OutScript, TEST_NETWORK, Transaction, p2sh, p2wsh } f
 import { base64, hex } from "@scure/base";
 import { urDecode } from "./ur.ts";
 import { secp256k1 } from "@noble/curves/secp256k1.js";
-import { deriveScript, derivePubkeys, type Wallet } from "./descriptor.ts";
+import { deriveScript, derivePubkeys, fingerprints, type Wallet } from "./descriptor.ts";
+import { afterMet, compile, missingSignatures, olderLocks, olderMet, runWitness, satisfaction, scriptHasKey } from "./miniscript.ts";
 
 export type Network = "main" | "test" | "regtest";
 
@@ -201,24 +202,33 @@ export function signatureValid(tx: Transaction, n: number, pubkey: Uint8Array, s
  * The keys (indexes into pubkeys) whose signatures a finalised multisig witness carries, checked the way
  * OP_CHECKMULTISIG does; null if the witness would not spend the coin.
  */
-function finalSigners(tx: Transaction, n: number, witness: Uint8Array[], witnessScript: Uint8Array, pubkeys: Uint8Array[], m: number, amount: bigint): number[] | null {
+function finalSigners(tx: Transaction, n: number, witness: Uint8Array[], witnessScript: Uint8Array, pubkeys: Uint8Array[], m: number, amount: bigint): Signed[] | null {
   if (witness.length !== m + 2 || witness[0].length !== 0 || !same(witness[witness.length - 1], witnessScript)) return null;
-  const signers: number[] = [];
+  const signers: Signed[] = [];
   let k = 0;
   for (const sig of witness.slice(1, -1)) {
     while (k < pubkeys.length && !signatureValid(tx, n, pubkeys[k], sig, witnessScript, amount)) k++;
     if (k === pubkeys.length) return null;
-    signers.push(k++);
+    signers.push({ pubkey: pubkeys[k++], sig });
   }
   return signers;
 }
 
+type Signed = { pubkey: Uint8Array; sig: Uint8Array };
+
+/** What a transaction's input meets of the relative and absolute timelocks (BIP 68, 112, 65). */
+function timelocks(tx: Transaction, n: number): { older: (lock: number) => boolean; after: (lock: number) => boolean } {
+  const sequence = tx.getInput(n).sequence ?? 0xffffffff;
+  return { older: (lock) => olderMet(lock, sequence, tx.version), after: (lock) => afterMet(lock, tx.lockTime, sequence) };
+}
+
 /**
  * A finalised input checked against its coin: the witness script (the given one, else the witness's own) must be the
- * one the coin locks to, the P2SH wrapper must match, and the signatures must spend it. The signing keys (as
- * [pubkeys, indexes]) or null.
+ * one the coin locks to, the P2SH wrapper must match, and the signatures must spend it: a multisig witness the way
+ * OP_CHECKMULTISIG reads it, any other (a miniscript one) run through miniscript.ts's interpreter. The signatures with
+ * their keys, or null.
  */
-function finalCheck(tx: Transaction, n: number, expected?: Uint8Array): { pubkeys: Uint8Array[]; signers: number[] } | null {
+function finalCheck(tx: Transaction, n: number, expected?: Uint8Array): Signed[] | null {
   const input = tx.getInput(n);
   const w = input.finalScriptWitness;
   const prev = prevoutOf(tx, n);
@@ -229,8 +239,12 @@ function finalCheck(tx: Transaction, n: number, expected?: Uint8Array): { pubkey
   const wantSig = same(wsh.script, prev.script) ? new Uint8Array() : Uint8Array.of(wsh.script.length, ...wsh.script);
   if (!same(scriptSig, wantSig)) return null;
   const ms = multisigKeys(ws);
-  const signers = ms && finalSigners(tx, n, w, ws, ms.pubkeys, ms.m, prev.amount);
-  return signers ? { pubkeys: ms.pubkeys, signers } : null;
+  if (ms) return finalSigners(tx, n, w, ws, ms.pubkeys, ms.m, prev.amount);
+  if (!same(w[w.length - 1], ws)) return null;
+  return runWitness(w.slice(0, -1), ws, {
+    checkSig: (pubkey, sig) => signatureValid(tx, n, pubkey, sig, ws, prev.amount),
+    ...timelocks(tx, n),
+  });
 }
 
 /**
@@ -254,10 +268,10 @@ export function stripInvalid(tx: Transaction): { tx: Transaction; dropped: numbe
     const sigs = input.partialSig ?? [];
     if (!sigs.length) continue;
     const ws = input.witnessScript;
-    const ms = ws && prev && locks(ws, prev.script) ? multisigKeys(ws) : null;
-    const valid = sigs.filter(
-      ([pk, sig]) => !!ms && ms.pubkeys.some((k) => same(k, pk)) && signatureValid(out, n, pk, sig, ws!, prev!.amount),
-    );
+    const ok = !!ws && !!prev && locks(ws, prev.script);
+    const ms = ok ? multisigKeys(ws!) : null;
+    const inScript = (pk: Uint8Array) => (ms ? ms.pubkeys.some((k) => same(k, pk)) : ok && scriptHasKey(ws!, pk));
+    const valid = sigs.filter(([pk, sig]) => inScript(pk) && signatureValid(out, n, pk, sig, ws!, prev!.amount));
     if (valid.length !== sigs.length) {
       dropped += sigs.length - valid.length;
       setPartialSigs(out, n, valid);
@@ -311,7 +325,9 @@ export type Warning =
   | { k: "amount-mismatch"; n: number }
   | { k: "sighash"; n: number }
   | { k: "high-fee" }
-  | { k: "no-change-back" };
+  | { k: "no-change-back" }
+  /** A miniscript (Liana) spend whose inputs open a recovery path: the timelock, in blocks, of the longest one open. */
+  | { k: "recovery-path"; blocks: number };
 
 type Derivation = [Uint8Array, { fingerprint: number; path: number[] }][];
 
@@ -320,19 +336,23 @@ const fp = (n: number) => (n >>> 0).toString(16).padStart(8, "0");
 /** The wallet address (branch, index) a PSBT derivation points to, if it is one of this wallet's keys and paths. */
 function placeOf(wallet: Wallet, derivation: Derivation | undefined): { branch: number; index: number } | null {
   for (const [, { fingerprint, path }] of derivation ?? []) {
-    const key = wallet.keys.find((k) => k.fingerprint === fp(fingerprint));
-    if (!key || path.length !== key.origin.length + key.steps.length) continue;
-    if (!key.origin.every((s, i) => path[i] === s)) continue;
-    let branch = -1;
-    let index = -1;
-    const ok = key.steps.every((step, i) => {
-      const v = path[key.origin.length + i];
-      if (step === "branch") branch = v;
-      else if (step === "index") index = v;
-      else return v === step;
-      return v < 0x80000000;
-    });
-    if (ok && (branch === wallet.branches.receive || branch === wallet.branches.change)) return { branch, index };
+    // A miniscript wallet can hold one co-signer's key several times, each at its own steps.
+    for (const key of wallet.keys) {
+      if (key.fingerprint !== fp(fingerprint) || path.length !== key.origin.length + key.steps.length) continue;
+      if (!key.origin.every((s, i) => path[i] === s)) continue;
+      let branch = -1;
+      let index = -1;
+      const ok = key.steps.every((step, i) => {
+        const v = path[key.origin.length + i];
+        if (step === "branch") branch = v;
+        else if (step === "index") index = v;
+        else return v === step;
+        return v < 0x80000000;
+      });
+      if (!ok) continue;
+      if (branch === key.branches.receive) return { branch: wallet.branches.receive, index };
+      if (branch === key.branches.change) return { branch: wallet.branches.change, index };
+    }
   }
   return null;
 }
@@ -351,11 +371,23 @@ export function addressOf(script: Uint8Array, network: Network): string {
 
 const varint = (n: number) => (n < 0xfd ? 1 : n <= 0xffff ? 3 : 5);
 
-/** Bytes of one wallet input once signed: [non-witness, witness]. Signatures counted at 72 bytes, the most they take. */
-function inputSize(wallet: Wallet): [number, number] {
+/**
+ * Bytes of one wallet input once signed: [non-witness, witness]. Signatures counted at 72 bytes, the most they take.
+ * A miniscript input is counted as the smallest spend its timelocks allow, with every key signing.
+ */
+function inputSize(wallet: Wallet, tx: Transaction, n: number): [number, number] {
+  const base = 41 + (wallet.script === "sh-wsh" ? 35 : 0);
+  if (wallet.policy) {
+    const key = Uint8Array.of(2, ...new Uint8Array(32));
+    const ws = compile(wallet.policy, wallet.keys.map(() => key));
+    const items = satisfaction(wallet.policy, { pubkey: () => key, sig: () => new Uint8Array(72), ...timelocks(tx, n) }) ??
+      satisfaction(wallet.policy, { pubkey: () => key, sig: () => new Uint8Array(72), older: () => true, after: () => true }) ??
+      [];
+    return [base, varint(items.length + 1) + items.reduce((s, i) => s + varint(i.length) + i.length, 0) + varint(ws.length) + ws.length];
+  }
   const ws = 3 + 34 * wallet.keys.length;
   const witness = varint(wallet.threshold + 2) + 1 + wallet.threshold * 73 + varint(ws) + ws;
-  return [41 + (wallet.script === "sh-wsh" ? 35 : 0), witness];
+  return [base, witness];
 }
 
 function estimateVsize(tx: Transaction, wallet: Wallet): number {
@@ -365,7 +397,6 @@ function estimateVsize(tx: Transaction, wallet: Wallet): number {
     const s = tx.getOutput(i).script!;
     base += 8 + varint(s.length) + s.length;
   }
-  const [ib, iw] = inputSize(wallet);
   for (let i = 0; i < tx.inputsLength; i++) {
     const input = tx.getInput(i);
     if (input.finalScriptWitness) {
@@ -374,6 +405,7 @@ function estimateVsize(tx: Transaction, wallet: Wallet): number {
       const ss = input.finalScriptSig?.length ?? 0;
       base += 40 + varint(ss) + ss;
     } else {
+      const [ib, iw] = inputSize(wallet, tx, i);
       base += ib;
       witness += iw;
     }
@@ -387,6 +419,8 @@ const HIGH_FEE_RATE = 1000n;
 export function summarise(tx: Transaction, wallet: Wallet, network: Network): Summary {
   const warnings: Warning[] = [];
   const inputs: InputInfo[] = [];
+  /** Per input, the signatures still missing (0 once final). */
+  const short: number[] = [];
   let totalIn: bigint | null = 0n;
   for (let n = 0; n < tx.inputsLength; n++) {
     const input = tx.getInput(n);
@@ -412,6 +446,8 @@ export function summarise(tx: Transaction, wallet: Wallet, network: Network): Su
     // Who signed, read against the wallet: a signature counts only if it is by one of the keys the descriptor derives
     // for this input, and verifies. The PSBT's own key labels are not trusted.
     const signedBy: string[] = [];
+    /** Indexes into wallet.keys of the keys whose valid signatures this input holds. */
+    const signedKeys = new Set<number>();
     let final = false;
     if (input.finalScriptWitness) {
       // A finaliser (Bitcoin Core) drops the key paths, so a finalised input is checked against its own witness
@@ -420,11 +456,11 @@ export function summarise(tx: Transaction, wallet: Wallet, network: Network): Su
       const done = finalCheck(tx, n, mine ? deriveScript(wallet, place!.branch, place!.index).witnessScript : undefined);
       if (done) {
         final = true;
-        for (const i of done.signers) {
-          const at = pubkeys.findIndex((p) => same(p, done.pubkeys[i]));
+        for (const { pubkey, sig } of done) {
+          const at = pubkeys.findIndex((p) => same(p, pubkey));
           if (at >= 0) signedBy.push(wallet.keys[at].fingerprint);
+          if (sig[sig.length - 1] !== 0x01) warnings.push({ k: "sighash", n });
         }
-        for (const sig of input.finalScriptWitness.slice(1, -1)) if (sig[sig.length - 1] !== 0x01) warnings.push({ k: "sighash", n });
       }
     } else if (mine && amount !== null) {
       const pubkeys = derivePubkeys(wallet, place!.branch, place!.index);
@@ -432,9 +468,20 @@ export function summarise(tx: Transaction, wallet: Wallet, network: Network): Su
       for (const [pk, sig] of input.partialSig ?? []) {
         const i = pubkeys.findIndex((p) => same(p, pk));
         if (i < 0 || !signatureValid(tx, n, pk, sig, witnessScript, amount)) continue;
+        signedKeys.add(i);
         signedBy.push(wallet.keys[i].fingerprint);
         if (sig[sig.length - 1] !== 0x01) warnings.push({ k: "sighash", n });
       }
+    }
+    if (final) short.push(0);
+    else if (wallet.policy) {
+      // The fewest signatures that complete any spending path this input's timelocks open.
+      const need = missingSignatures(wallet.policy, (i) => signedKeys.has(i), timelocks(tx, n));
+      short.push(Number.isFinite(need) ? need : missingSignatures(wallet.policy, (i) => signedKeys.has(i), { older: () => true, after: () => true }));
+    } else short.push(Math.max(0, wallet.threshold - new Set(signedBy).size));
+    if (mine && wallet.policy) {
+      const open = olderLocks(wallet.policy).filter(timelocks(tx, n).older);
+      if (open.length) warnings.push({ k: "recovery-path", blocks: Math.max(...open) });
     }
     if (input.sighashType !== undefined && input.sighashType !== 1) warnings.push({ k: "sighash", n });
     inputs.push({
@@ -467,6 +514,12 @@ export function summarise(tx: Transaction, wallet: Wallet, network: Network): Su
   }
 
   const fee = totalIn === null ? null : totalIn - totalOut;
+  const recoveries = warnings.filter((w) => w.k === "recovery-path");
+  if (recoveries.length > 1) {
+    const blocks = Math.max(...recoveries.map((w) => w.blocks));
+    for (let i = warnings.length - 1; i >= 0; i--) if (warnings[i].k === "recovery-path") warnings.splice(i, 1);
+    warnings.unshift({ k: "recovery-path", blocks });
+  }
   // One warning per kind and place, however many signatures carry it.
   const seen = new Set<string>();
   for (let i = warnings.length - 1; i >= 0; i--) {
@@ -481,24 +534,55 @@ export function summarise(tx: Transaction, wallet: Wallet, network: Network): Su
   const outsideOnly = outputs.every((o) => o.kind === "external" || o.kind === "fake-change");
   if (spendsMine && outsideOnly && outputs.length > 1) warnings.push({ k: "no-change-back" });
 
-  const counts = inputs.map((i) => (i.final ? wallet.threshold : i.signedBy.length));
-  const missing = Math.max(0, ...counts.map((c) => wallet.threshold - c));
-  const signers = wallet.keys
-    .map((k) => k.fingerprint)
+  const missing = Math.max(0, ...short);
+  const signers = fingerprints(wallet)
     // A finalised input names only the keys whose signatures its witness carries (checked above), never all of them.
     .filter((f) => inputs.length > 0 && inputs.every((i) => i.signedBy.includes(f)));
   return { txid: tx.id, inputs, outputs, fee, vsize, missing, signers, complete: missing === 0 && inputs.length > 0, warnings };
 }
 
-/** The signed transaction, ready for any wallet or node to broadcast. Throws if signatures are missing. */
-export function finalise(tx: Transaction): string {
+/**
+ * The signed transaction, ready for any wallet or node to broadcast. Throws if signatures are missing. A miniscript
+ * (Liana) wallet's inputs need the wallet: their witness is the smallest one the signatures and timelocks satisfy.
+ */
+export function finalise(tx: Transaction, wallet?: Wallet): string {
   const out = stripInvalid(tx).tx;
   try {
     // An input a wallet already finalised (Electrum does, once its signature completes the spend) keeps its witness;
     // stripInvalid has checked it.
-    for (let n = 0; n < out.inputsLength; n++) if (!out.getInput(n).finalScriptWitness) out.finalizeIdx(n);
+    for (let n = 0; n < out.inputsLength; n++) {
+      const input = out.getInput(n);
+      if (input.finalScriptWitness) continue;
+      if (wallet?.policy) finaliseMiniscript(out, n, wallet);
+      else out.finalizeIdx(n);
+    }
     return hex.encode(out.extract());
   } catch (e) {
     throw new PsbtError(`cannot finalise yet (${(e as Error).message})`);
   }
+}
+
+/** Finalises a miniscript wallet's input n: its witness from the PSBT's signatures, checked by running it. */
+function finaliseMiniscript(tx: Transaction, n: number, wallet: Wallet): void {
+  const input = tx.getInput(n);
+  const place = placeOf(wallet, input.bip32Derivation as Derivation | undefined);
+  const prev = prevoutOf(tx, n);
+  if (!place || !prev) throw new PsbtError(`input ${n + 1} is not this wallet's`);
+  const { script, witnessScript } = deriveScript(wallet, place.branch, place.index);
+  if (!same(script, prev.script)) throw new PsbtError(`input ${n + 1} is not this wallet's`);
+  const pubkeys = derivePubkeys(wallet, place.branch, place.index);
+  const sigs = input.partialSig ?? [];
+  const items = satisfaction(wallet.policy!, {
+    pubkey: (k) => pubkeys[k],
+    sig: (k) => sigs.find(([pk]) => same(pk, pubkeys[k]))?.[1],
+    ...timelocks(tx, n),
+  });
+  if (!items) throw new PsbtError(`input ${n + 1} has not enough signatures`);
+  const witness = [...items, witnessScript];
+  const wsh = p2wsh({ type: "unknown", script: witnessScript } as never);
+  const scriptSig = wallet.script === "sh-wsh" ? Uint8Array.of(wsh.script.length, ...wsh.script) : undefined;
+  tx.updateInput(n, { finalScriptWitness: witness, ...(scriptSig ? { finalScriptSig: scriptSig } : {}) }, true);
+  if (!finalCheck(tx, n, witnessScript)) throw new PsbtError(`input ${n + 1}: the witness does not spend the coin`);
+  // As BIP 174's finaliser does: the signing data goes once the witness is in.
+  tx.updateInput(n, { partialSig: undefined, witnessScript: undefined, bip32Derivation: undefined, sighashType: undefined }, true);
 }

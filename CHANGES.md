@@ -31,3 +31,10 @@ What each published version of Multisig changed, newest first. A version is publ
   as such, instead of "not a PSBT".
 - A copy another wallet already finalised: merging it keeps the key paths, names only the keys that signed, and
   finishing it no longer fails.
+- Reads Liana wallets (P2WSH miniscript: `wsh(or_d(pk(A),and_v(v:pkh(B),older(N))))` and its multi-key, multi-path
+  forms, keys at `<0;1>`, `<2;3>`...). Change is re-derived from the miniscript; signers are named per co-signer however
+  many paths their key is on; "missing" and "fully signed" follow the spending paths, not k-of-n; the witness is the
+  smallest one the signatures and timelocks satisfy, checked by running it. A spend through a recovery path is flagged
+  with its timelock. Taproot Liana wallets are refused ("not supported yet").
+- Tested against Liana 16.0 (lianad, the release binary) on regtest: a primary-path and a recovery-path spend that
+  lianad created, merged and broadcast, co-signed by Bitcoin Core wallets; the app finalises each to lianad's transaction.

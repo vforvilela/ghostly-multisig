@@ -10,12 +10,17 @@
  *
  * Caravan's wallet file (JSON) is read as the descriptor it describes (caravanWallet).
  *
+ * A Liana wallet is a miniscript one: wsh(MINISCRIPT), e.g. wsh(or_d(pk(A),and_v(v:pkh(B),older(N)))), each key with
+ * its own <receive;change> pair (Liana puts one key on several paths with <0;1>, <2;3>...). See miniscript.ts. Taproot
+ * Liana wallets (tr(...)) are refused.
+ *
  * The wallet is the person's own, pasted from their coordinator: it is never taken from the contact (see docs/protocol.md).
  */
 import { HDKey } from "@scure/bip32";
 import { p2ms, p2sh, p2wsh } from "@scure/btc-signer";
 import { base58check, hex } from "@scure/base";
 import { sha256 } from "@noble/hashes/sha2.js";
+import { compile, MiniscriptError, olderLocks, parseMiniscript, printMiniscript, type Miniscript } from "./miniscript.ts";
 
 export const HARDENED = 0x80000000;
 
@@ -29,6 +34,8 @@ export interface WalletKey {
   xpub: string;
   /** The unhardened steps after `xpub`: a number, "branch" (the receive/change step) or "index" (the `*`). */
   steps: (number | "branch" | "index")[];
+  /** The branch step's value for receive and change addresses: the wallet's, or the key's own in a miniscript wallet. */
+  branches: { receive: number; change: number };
   hd: HDKey;
 }
 
@@ -38,9 +45,13 @@ export type Chain = "main" | "test";
 export interface Wallet {
   script: ScriptType;
   sorted: boolean;
+  /** Signatures a multisig wallet needs; for a miniscript one, its first spending path's. */
   threshold: number;
+  /** The descriptor's keys in order. In a miniscript wallet one co-signer's key can be here more than once, at other paths. */
   keys: WalletKey[];
-  /** The value of the branch step for receive and change addresses. */
+  /** A miniscript (Liana) wallet's script, its keys indexes into `keys`; absent for a multisig wallet. */
+  policy?: Miniscript;
+  /** The branch step's value for receive and change addresses; a miniscript wallet's are 0 and 1, each key's own in its `branches`. */
   branches: { receive: number; change: number };
   /** xpub (main) or tpub (test, signet, regtest). */
   chain: Chain;
@@ -159,6 +170,29 @@ interface ParsedLine {
   sorted: boolean;
   threshold: number;
   keys: ParsedKey[];
+  policy?: Miniscript;
+}
+
+function parseMiniscriptLine(script: ScriptType, body: string): ParsedLine {
+  const keys: ParsedKey[] = [];
+  let policy: Miniscript;
+  try {
+    policy = parseMiniscript(body, (text) => keys.push(parseKey(text)) - 1);
+  } catch (e) {
+    if (e instanceof MiniscriptError) throw new DescriptorError(`not a wallet descriptor this app can read: ${e.message}`);
+    throw e;
+  }
+  if (!keys.length) throw new DescriptorError("the descriptor has no keys");
+  if (keys.length > 64) throw new DescriptorError("too many keys");
+  if (olderLocks(policy).some((n) => n & 0x00400000 || n > 0xffff)) {
+    throw new DescriptorError("only timelocks in blocks (up to 65535) are supported");
+  }
+  let threshold = 1;
+  for (let m: Miniscript = policy; ; m = m.subs[0]) {
+    if (m.f === "multi" || m.f === "thresh") threshold = m.k!;
+    if (m.f === "multi" || m.f === "thresh" || !m.subs.length) break;
+  }
+  return { script, sorted: false, threshold, keys, policy };
 }
 
 function parseLine(raw: string): ParsedLine {
@@ -179,11 +213,16 @@ function parseLine(raw: string): ParsedLine {
     body = sh[1];
   } else if (wsh) {
     body = wsh[1];
+  } else if (text.startsWith("tr(")) {
+    throw new DescriptorError("Taproot Liana wallets are not supported yet");
   } else {
-    throw new DescriptorError("only wsh(...) and sh(wsh(...)) multisig descriptors are supported");
+    throw new DescriptorError("only wsh(...) and sh(wsh(...)) descriptors are supported");
   }
-  const ms = /^(sortedmulti|multi)\((\d+),(.*)\)$/.exec(body);
-  if (!ms) throw new DescriptorError("not a multisig descriptor: expected sortedmulti(...) or multi(...)");
+  const ms = /^(sortedmulti|multi)\((\d+),([^()]*)\)$/.exec(body);
+  if (!ms) {
+    if (/^sortedmulti\(/.test(body)) throw new DescriptorError("not a multisig descriptor: expected sortedmulti(k,KEY,...)");
+    return parseMiniscriptLine(script, body);
+  }
   const threshold = Number(ms[2]);
   const keys = ms[3].split(",").map(parseKey);
   if (keys.length < 2 || keys.length > 15) throw new DescriptorError("a multisig wallet has 2 to 15 keys");
@@ -238,6 +277,10 @@ export function parseWallet(input: string): Wallet {
   if (lines.length > 2) throw new DescriptorError("paste one descriptor (or its receive and change lines)");
   const parsed = lines.map(parseLine);
   const first = parsed[0];
+  if (first.policy || parsed[1]?.policy) {
+    if (parsed.length === 2) throw new DescriptorError("paste a miniscript wallet as one descriptor, with <receive;change> steps");
+    return miniscriptWallet(first);
+  }
   const shape = (p: ParsedLine) => JSON.stringify([p.script, p.sorted, p.threshold, p.keys.map((k) => [k.fingerprint, k.origin, k.xpub, k.steps.length])]);
   if (parsed.length === 2 && shape(parsed[0]) !== shape(parsed[1])) throw new DescriptorError("the two lines are not the same wallet");
   // The step whose value differs between receive and change: a <a;b> step, or the one that differs between the lines.
@@ -277,6 +320,7 @@ export function parseWallet(input: string): Wallet {
     xpub: k.xpub,
     hd: k.hd,
     steps: k.steps.map((s, i) => (i === branchAt ? "branch" : s)) as WalletKey["steps"],
+    branches: { receive, change },
   }));
   if (new Set(keys.map((k) => k.xpub)).size !== keys.length) throw new DescriptorError("the same key is in the wallet twice");
   const canonical = [
@@ -293,11 +337,51 @@ export function parseWallet(input: string): Wallet {
   return { script: first.script, sorted: first.sorted, threshold: first.threshold, keys, branches: { receive, change }, chain: [...chains][0], id };
 }
 
+/** A miniscript (Liana) wallet: every key with its own <receive;change> step. */
+function miniscriptWallet(line: ParsedLine): Wallet {
+  const chains = new Set(line.keys.map((k) => k.chain));
+  if (chains.size !== 1) throw new DescriptorError("the keys mix mainnet (xpub) and test (tpub) keys");
+  const keys: WalletKey[] = line.keys.map((k) => {
+    const multi = k.steps.filter(Array.isArray);
+    if (multi.length !== 1 || multi[0].length !== 2) {
+      throw new DescriptorError(`key ${k.fingerprint}: every key needs one <receive;change> step, as /<0;1>/*`);
+    }
+    const [receive, change] = multi[0];
+    if (receive === change) throw new DescriptorError("receive and change are the same branch");
+    return {
+      fingerprint: k.fingerprint,
+      origin: k.origin,
+      xpub: k.xpub,
+      hd: k.hd,
+      steps: k.steps.map((s) => (Array.isArray(s) ? "branch" : s)) as WalletKey["steps"],
+      branches: { receive, change },
+    };
+  });
+  // One key on several paths is fine, at other steps; the same public key twice is not.
+  const paths = keys.flatMap((k) =>
+    [k.branches.receive, k.branches.change].map((b) => `${k.xpub}/${k.steps.map((s) => (s === "branch" ? b : s)).join("/")}`),
+  );
+  if (new Set(paths).size !== paths.length) throw new DescriptorError("the same key is in the wallet twice");
+  const policy = line.policy!;
+  const canonical = [
+    line.script,
+    "miniscript",
+    printMiniscript(policy, (i) => {
+      const k = keys[i];
+      return `${k.fingerprint}/${k.origin.join("/")}/${k.xpub}/${k.steps.join("/")}/${k.branches.receive};${k.branches.change}`;
+    }),
+  ].join("|");
+  const id = hex.encode(sha256(new TextEncoder().encode(canonical))).slice(0, 16);
+  return { script: line.script, sorted: false, threshold: line.threshold, keys, policy, branches: { receive: 0, change: 1 }, chain: [...chains][0], id };
+}
+
 /** The public keys of the wallet's address at (branch, index), in the descriptor's key order. */
 export function derivePubkeys(wallet: Wallet, branch: number, index: number): Uint8Array[] {
   return wallet.keys.map((key) => {
+    // The wallet's receive or change branch, as this key has it.
+    const own = branch === wallet.branches.receive ? key.branches.receive : branch === wallet.branches.change ? key.branches.change : branch;
     let node = key.hd;
-    for (const step of key.steps) node = node.deriveChild(step === "branch" ? branch : step === "index" ? index : step);
+    for (const step of key.steps) node = node.deriveChild(step === "branch" ? own : step === "index" ? index : step);
     if (!node.publicKey) throw new DescriptorError("could not derive a public key");
     return node.publicKey;
   });
@@ -311,6 +395,11 @@ function compare(a: Uint8Array, b: Uint8Array): number {
 /** The wallet's output script and witness script at (branch, index). */
 export function deriveScript(wallet: Wallet, branch: number, index: number): { script: Uint8Array; witnessScript: Uint8Array } {
   let pubkeys = derivePubkeys(wallet, branch, index);
+  if (wallet.policy) {
+    const witnessScript = compile(wallet.policy, pubkeys);
+    const wsh = p2wsh({ type: "unknown", script: witnessScript } as never);
+    return { script: wallet.script === "wsh" ? wsh.script : p2sh(wsh).script, witnessScript };
+  }
   if (wallet.sorted) pubkeys = [...pubkeys].sort(compare);
   const ms = p2ms(wallet.threshold, pubkeys);
   const wsh = p2wsh(ms);
@@ -319,13 +408,14 @@ export function deriveScript(wallet: Wallet, branch: number, index: number): { s
 }
 
 /** `a-b-c` key labels: each key's fingerprint, the way coordinators show them. */
-export const fingerprints = (wallet: Wallet): string[] => wallet.keys.map((k) => k.fingerprint);
+export const fingerprints = (wallet: Wallet): string[] => [...new Set(wallet.keys.map((k) => k.fingerprint))];
 
 /**
  * The wallet as Coldcard's multisig setup file, the text Passport, Keystone and Coldcard import (Keystone and Passport
  * by scanning it as a `ur:bytes` QR). Those devices take only sorted keys on branches 0 and 1, so other wallets throw.
  */
 export function coldcardFile(w: Wallet): string {
+  if (w.policy) throw new DescriptorError("hardware wallets import a Liana wallet from Liana itself, not as a multisig file");
   if (!w.sorted) throw new DescriptorError("hardware wallets import only sortedmulti wallets, and this one is multi");
   if (w.branches.receive !== 0 || w.branches.change !== 1 || w.keys.some((k) => k.steps.join() !== "branch,index")) {
     throw new DescriptorError("hardware wallets import only wallets whose keys end in /<0;1>/*");

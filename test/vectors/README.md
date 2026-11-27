@@ -14,6 +14,7 @@ files and need no node or network; the scripts regenerate the generated ones.
 | `hardware.json` | regtest spends of 2-of-3s with Core: Coldcard, BitBox02, Ledger (app-bitcoin 2.5.0, Speculos) and Jade 1.0.36 (QEMU) simulators via HWI 3.2.0, each mined by Core | test data | `scripts/interop/hardware.mjs` |
 | `caravan.json` | `@caravan/psbt` 2.1.2 and `@caravan/bitcoin` 0.4.7 on `signing.json`'s spend, and the first addresses of each wallet file in `caravan/` | test data | `scripts/interop/caravan.mjs` |
 | `ur.json` | `@ngraveio/bc-ur` 1.1.13 and `@keystonehq/bc-ur-registry` 0.8.1 on `signing.json`'s PSBTs; QR read back with jsQR 1.4.0 | test data | `scripts/interop/ur.mjs <node_modules>` |
+| `liana.json` | a Liana wallet (three spending paths) run by lianad 16.0 (release binary, signature checked) on regtest: a primary-path and a 10-block recovery-path spend, created, merged, finalised and broadcast by lianad, co-signed by Bitcoin Core v30.2 wallets, mined by Core | test data, fixed seeds | `scripts/interop/liana.mjs` |
 | `caravan/*.json` | Caravan's wallet-file fixtures, caravan-bitcoin/caravan `dff6283` (`apps/coordinator/fixtures/caravan/`) | MIT | copied |
 
 ## Regenerating
@@ -45,5 +46,11 @@ with the account keypath, which HWI's `registerdescriptor` and `signtx` do not s
 `caravan.json` needs only the two Caravan packages installed somewhere (`npm install @caravan/psbt @caravan/bitcoin`):
 
     node scripts/interop/caravan.mjs <that folder>/node_modules
+
+`liana.json` needs Liana's release binary unpacked (`liana-16.0-x86_64-linux-gnu.tar.gz`, checked against
+`liana-16.0-shasums.txt` and its signature) and a fresh regtest `bitcoind` (`-fallbackfee=0.0001 -txindex=1`); the
+script runs lianad against it in the work folder:
+
+    node scripts/interop/liana.mjs <folder with lianad> <work folder> -regtest -rpcport=… -datadir=…
 
 Every key here is a BIP 39 test mnemonic, a simulator's fixed test seed or a fixed seed: never send real coins to them.

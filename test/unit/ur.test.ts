@@ -87,5 +87,7 @@ describe("the wallet for a hardware signer (Coldcard's multisig file)", () => {
   test("refused for a wallet these devices cannot hold", async () => {
     const { coldcardFile, parseWallet } = await import("../../src/descriptor.ts");
     expect(() => coldcardFile(parseWallet(v.descriptor.replace("sortedmulti", "multi").replace(/#\w+$/, "")))).toThrow(/only sortedmulti/);
+    const liana = JSON.parse(readFileSync(new URL("../vectors/liana.json", import.meta.url), "utf8")).descriptor;
+    expect(() => coldcardFile(parseWallet(liana))).toThrow(/from Liana itself/);
   });
 });

@@ -266,7 +266,7 @@ export class MultisigController {
     const current = this.state.current;
     if (!current?.summary?.complete) return null;
     try {
-      return finalise(current.tx);
+      return finalise(current.tx, this.state.wallet ?? undefined);
     } catch {
       return null;
     }

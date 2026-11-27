@@ -30,6 +30,12 @@ one self-contained HTML file, `"permissions": ["chat"]` only.
 (`<0;1>/*` or one line per branch), on mainnet, testnet/signet or regtest. xpub/tpub and SLIP-132 (Zpub, Vpub...)
 keys are read. Taproot and legacy P2SH multisig are not.
 
+Liana wallets: `wsh(MINISCRIPT)` as Liana writes it, e.g. `wsh(or_d(pk(A),and_v(v:pkh(B),older(N))))` with any number
+of keys and recovery paths, each key with its own `<a;b>` step (`<0;1>`, `<2;3>`...). Signatures are counted against
+the spending paths, the witness is built for whichever path they complete, and a spend through a recovery path is
+flagged. Miniscript is parsed, type-checked and compiled in `src/miniscript.ts` (P2WSH fragments only; no hash locks,
+timelocks in blocks only). Taproot Liana wallets (`tr(...)`) are not supported yet.
+
 ## Build
 
 Node 22 or later.
