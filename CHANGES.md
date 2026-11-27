@@ -3,7 +3,7 @@
 What each published version of Multisig changed, newest first. A version is published when its signed bundle,
 `app.ghostlyapp`, is committed here and the Ghostly store lists it ([docs/PUBLISHING.md](docs/PUBLISHING.md)).
 
-## Unreleased (0.1.0)
+## 0.1.0 (2026-11-27)
 
 - Reads `wsh` and `sh(wsh)` multisig descriptors (`multi` and `sortedmulti`, 2-15 keys), checksum checked.
 - Air-gapped signers (Passport, Keystone, Jade, Sparrow): the PSBT as an animated `ur:crypto-psbt` QR code, the

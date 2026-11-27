@@ -1,6 +1,6 @@
 # Publishing a version of Multisig
 
-Same flow as Ghostly Chess's `docs/PUBLISHING.md`. Nothing here has been published yet.
+Same flow as Ghostly Chess's `docs/PUBLISHING.md`.
 
 ## Once, before the first version
 

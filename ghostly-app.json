@@ -5,7 +5,7 @@
   "title": "Multisig",
   "tagline": "Pass a multisig transaction between co-signers in your chat",
   "description": "Paste your wallet's output descriptor and a PSBT. Multisig shows where every satoshi goes, checks the change against your own wallet, and passes the PSBT to your contact over the chat, merging the signatures you each add. It never signs and never sees a private key: signing stays in your own wallet.",
-  "releaseNotes": "First version: 2-of-3 and other P2WSH / P2SH-P2WSH multisig wallets, PSBT checks, signature merging and relay over the chat.",
+  "releaseNotes": "First version: P2WSH and P2SH-P2WSH multisig wallets, Liana wallets (P2WSH and Taproot, with recovery paths), Caravan wallet files, PSBT checks, signature merging and relay over the chat, QR codes and files for air-gapped signers.",
   "entry": "index.html",
   "permissions": ["chat"],
   "view": "chat",
