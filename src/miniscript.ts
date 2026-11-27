@@ -1,15 +1,17 @@
 /**
  * The miniscript a Liana wallet's descriptor holds (wsh(or_d(pk(A),and_v(v:pkh(B),older(N)))) and its multi-key,
- * multi-path forms), for P2WSH only: parsed, type-checked, compiled to its witness script, read as spending paths,
+ * multi-path forms), for P2WSH and for Taproot's script leaves (Tapscript, BIP 342): parsed, type-checked, compiled to its witness script, read as spending paths,
  * and satisfied from the signatures a PSBT holds. Written here, not taken from a package: the subset is small, and
  * the one package (@bitcoinerlab/miniscript) gives assembly text rather than bytes and ships without a license file.
  *
- * The fragments are BIP 379's for P2WSH: 0 1 pk_k pk_h pk pkh older after multi thresh and_v and_b andor or_b or_c
- * or_d or_i, and the wrappers a s c d v j n t l u. Hash locks (sha256, hash160...) and Tapscript's multi_a are refused.
+ * The fragments are BIP 379's: 0 1 pk_k pk_h pk pkh older after thresh and_v and_b andor or_b or_c or_d or_i, the
+ * wrappers a s c d v j n t l u, and multi in P2WSH or multi_a in Tapscript (each is refused in the other). Hash locks
+ * (sha256, hash160...) and sortedmulti_a are refused. In Tapscript keys are x-only (32 bytes).
  * Types are checked as BIP 379 has them (base type B/V/K/W and the d and u properties), so a descriptor whose script
  * could not be spent, or not be dissatisfied where its parent needs it, is refused rather than read.
  *
- * A script interpreter for the same opcodes (runWitness) checks a finalised witness against its script.
+ * A script interpreter for the same opcodes (runWitness) checks a finalised witness against its script, under segwit
+ * v0's rules or Tapscript's (OP_CHECKSIGADD, no OP_CHECKMULTISIG).
  */
 import { ripemd160 } from "@noble/hashes/legacy.js";
 import { sha256 } from "@noble/hashes/sha2.js";
@@ -17,7 +19,7 @@ import { sha256 } from "@noble/hashes/sha2.js";
 export class MiniscriptError extends Error {}
 
 export type Fragment =
-  | "0" | "1" | "pk_k" | "pk_h" | "older" | "after" | "multi" | "thresh"
+  | "0" | "1" | "pk_k" | "pk_h" | "older" | "after" | "multi" | "multi_a" | "thresh"
   | "and_v" | "and_b" | "andor" | "or_b" | "or_c" | "or_d" | "or_i"
   | "a" | "s" | "c" | "d" | "v" | "j" | "n";
 
@@ -25,9 +27,9 @@ export type Fragment =
 export interface Miniscript {
   f: Fragment;
   subs: Miniscript[];
-  /** multi, thresh: the threshold. */
+  /** multi, multi_a, thresh: the threshold. */
   k?: number;
-  /** pk_k, pk_h: one key; multi: its keys. */
+  /** pk_k, pk_h: one key; multi, multi_a: their keys. */
   keys?: number[];
   /** older, after: the timelock. */
   n?: number;
@@ -64,20 +66,20 @@ function integer(text: string, min: number, max: number, what: string): number {
 
 const node = (f: Fragment, subs: Miniscript[] = [], extra: Partial<Miniscript> = {}): Miniscript => ({ f, subs, ...extra });
 
-/** Parses a miniscript expression; `key` reads each key expression and gives its index. */
-export function parseMiniscript(text: string, key: (text: string) => number): Miniscript {
-  const ms = parseExpr(text, key);
-  const t = typeOf(ms);
+/** Parses a miniscript expression, for P2WSH or (`tap`) a Tapscript leaf; `key` reads each key expression and gives its index. */
+export function parseMiniscript(text: string, key: (text: string) => number, tap = false): Miniscript {
+  const ms = parseExpr(text, key, tap);
+  const t = typeOf(ms, tap);
   if (t.base !== "B") throw new MiniscriptError("the miniscript is not a complete script (its top is not of type B)");
   return ms;
 }
 
-function parseExpr(text: string, key: (text: string) => number): Miniscript {
+function parseExpr(text: string, key: (text: string) => number, tap: boolean): Miniscript {
   const m = /^(?:([a-z]+):)?([a-z_0-9]+)(?:\((.*)\))?$/s.exec(text);
   if (!m) throw new MiniscriptError(`not a miniscript expression: ${text.slice(0, 32)}`);
   const [, wrappers = "", name, inner] = m;
   for (const w of wrappers) if (!WRAPPERS.includes(w)) throw new MiniscriptError(`unknown wrapper ${w}:`);
-  let ms = fragment(name, inner, key);
+  let ms = fragment(name, inner, key, tap);
   for (const w of [...wrappers].reverse()) {
     if (w === "t") ms = node("and_v", [ms, node("1")]);
     else if (w === "l") ms = node("or_i", [node("0"), ms]);
@@ -87,12 +89,12 @@ function parseExpr(text: string, key: (text: string) => number): Miniscript {
   return ms;
 }
 
-function fragment(name: string, inner: string | undefined, key: (text: string) => number): Miniscript {
+function fragment(name: string, inner: string | undefined, key: (text: string) => number, tap: boolean): Miniscript {
   const a = inner === undefined ? [] : args(inner);
   const want = (n: number) => {
     if (a.length !== n) throw new MiniscriptError(`${name} takes ${n} argument${n === 1 ? "" : "s"}`);
   };
-  const sub = (i: number) => parseExpr(a[i], key);
+  const sub = (i: number) => parseExpr(a[i], key, tap);
   switch (name) {
     case "0":
     case "1":
@@ -111,6 +113,7 @@ function fragment(name: string, inner: string | undefined, key: (text: string) =
       want(1);
       return node(name, [], { n: integer(a[0], 1, 0x7fffffff, name) });
     case "multi": {
+      if (tap) throw new MiniscriptError("multi is for P2WSH: in Taproot it is multi_a");
       if (a.length < 2) throw new MiniscriptError("multi takes a threshold and keys");
       const keys = a.slice(1).map(key);
       if (keys.length > 20) throw new MiniscriptError("multi takes at most 20 keys");
@@ -140,9 +143,15 @@ function fragment(name: string, inner: string | undefined, key: (text: string) =
     case "ripemd160":
     case "hash160":
       throw new MiniscriptError("hash locks are not supported");
-    case "multi_a":
+    case "multi_a": {
+      if (!tap) throw new MiniscriptError("multi_a is for Taproot: in P2WSH it is multi");
+      if (a.length < 2) throw new MiniscriptError("multi_a takes a threshold and keys");
+      const keys = a.slice(1).map(key);
+      if (keys.length > 999) throw new MiniscriptError("multi_a takes at most 999 keys");
+      return node("multi_a", [], { k: integer(a[0], 1, keys.length, "multi_a's threshold"), keys });
+    }
     case "sortedmulti_a":
-      throw new MiniscriptError(`${name} is for Taproot: Taproot Liana wallets are not supported yet`);
+      throw new MiniscriptError("sortedmulti_a is not supported");
     default:
       throw new MiniscriptError(`unknown miniscript fragment: ${name}`);
   }
@@ -156,8 +165,8 @@ interface Type {
   u: boolean;
 }
 
-function typeOf(ms: Miniscript): Type {
-  const s = ms.subs.map(typeOf);
+function typeOf(ms: Miniscript, tap: boolean): Type {
+  const s = ms.subs.map((m) => typeOf(m, tap));
   const need = (cond: boolean) => {
     if (!cond) throw new MiniscriptError(`${ms.f}: its arguments are not of the types it needs`);
   };
@@ -173,6 +182,7 @@ function typeOf(ms: Miniscript): Type {
     case "after":
       return { base: "B", d: false, u: false };
     case "multi":
+    case "multi_a":
       return { base: "B", d: true, u: true };
     case "thresh":
       need(s[0].base === "B" && s.slice(1).every((t) => t.base === "W") && s.every((t) => t.d && t.u));
@@ -208,7 +218,7 @@ function typeOf(ms: Miniscript): Type {
     case "d":
       need(s[0].base === "V");
       // d:X is u only in Tapscript, where MINIMALIF is consensus.
-      return { base: "B", d: true, u: false };
+      return { base: "B", d: true, u: tap };
     case "v":
       need(s[0].base === "B");
       return { base: "V", d: false, u: false };
@@ -262,7 +272,8 @@ export function printMiniscript(ms: Miniscript, key: (index: number) => string):
     case "after":
       return `${ms.f}(${ms.n})`;
     case "multi":
-      return `multi(${ms.k},${ms.keys!.map(key).join(",")})`;
+    case "multi_a":
+      return `${ms.f}(${ms.k},${ms.keys!.map(key).join(",")})`;
     case "thresh":
       return `thresh(${ms.k},${ms.subs.map(p).join(",")})`;
     case "a":
@@ -289,7 +300,7 @@ export const OP = {
   IFDUP: 0x73, DROP: 0x75, DUP: 0x76, SWAP: 0x7c, SIZE: 0x82, EQUAL: 0x87, EQUALVERIFY: 0x88,
   "0NOTEQUAL": 0x92, ADD: 0x93, BOOLAND: 0x9a, BOOLOR: 0x9b, NUMEQUAL: 0x9c, NUMEQUALVERIFY: 0x9d,
   HASH160: 0xa9, CHECKSIG: 0xac, CHECKSIGVERIFY: 0xad, CHECKMULTISIG: 0xae, CHECKMULTISIGVERIFY: 0xaf,
-  CHECKLOCKTIMEVERIFY: 0xb1, CHECKSEQUENCEVERIFY: 0xb2,
+  CHECKLOCKTIMEVERIFY: 0xb1, CHECKSEQUENCEVERIFY: 0xb2, CHECKSIGADD: 0xba,
 } as const;
 
 type Op = number | Uint8Array;
@@ -327,6 +338,8 @@ function ops(ms: Miniscript, pubkeys: Uint8Array[]): Op[] {
       return [num(ms.n!), OP.CHECKLOCKTIMEVERIFY];
     case "multi":
       return [num(ms.k!), ...ms.keys!.map((k) => pubkeys[k]), num(ms.keys!.length), OP.CHECKMULTISIG];
+    case "multi_a":
+      return [...ms.keys!.flatMap((k, i) => [pubkeys[k], i ? OP.CHECKSIGADD : OP.CHECKSIG]), num(ms.k!), OP.NUMEQUAL];
     case "thresh":
       return [...sub(0), ...ms.subs.slice(1).flatMap((_, i) => [...sub(i + 1), OP.ADD]), num(ms.k!), OP.EQUAL];
     case "and_v":
@@ -372,7 +385,7 @@ function push(data: Uint8Array): number[] {
   return [OP.PUSHDATA2, data.length & 0xff, data.length >> 8, ...data];
 }
 
-/** The witness script of the miniscript with these keys (one public key per key index). */
+/** The witness script (or Tapscript leaf) of the miniscript with these keys (one public key per key index, x-only in Tapscript). */
 export function compile(ms: Miniscript, pubkeys: Uint8Array[]): Uint8Array {
   return Uint8Array.from(ops(ms, pubkeys).flatMap((op) => (typeof op === "number" ? [op] : push(op))));
 }
@@ -415,6 +428,7 @@ function rawPaths(ms: Miniscript): SpendPath[] {
     case "pk_h":
       return [{ ...empty, groups: [{ k: 1, keys: ms.keys! }] }];
     case "multi":
+    case "multi_a":
       return [{ ...empty, groups: [{ k: ms.k!, keys: ms.keys! }] }];
     case "older":
       return [{ ...empty, older: [ms.n!] }];
@@ -522,6 +536,17 @@ function satisfy(ms: Miniscript, ctx: SatisfyContext): { sat: W; dsat: W } {
         dsat: wit(...Array<Uint8Array>(ms.k! + 1).fill(EMPTY)),
       };
     }
+    case "multi_a": {
+      // The first key's CHECKSIG takes the top item: so the last key's signature is at the bottom. Exactly k signatures
+      // (the first k there are, in key order), an empty item for every other key.
+      let left = ms.k!;
+      const items = ms.keys!.map((k) => {
+        const sig = left ? ctx.sig(k) : undefined;
+        if (sig) left--;
+        return sig ?? EMPTY;
+      });
+      return { sat: left ? null : wit(...items.reverse()), dsat: wit(...Array<Uint8Array>(ms.keys!.length).fill(EMPTY)) };
+    }
     case "thresh": {
       // The k subs whose satisfaction costs least over their dissatisfaction, the others dissatisfied.
       const order = s.map((x, i) => i).filter((i) => s[i].dsat !== null);
@@ -584,6 +609,7 @@ export function missingSignatures(ms: Miniscript, signed: (key: number) => boole
     case "after":
       return ctx.after(ms.n!) ? 0 : Infinity;
     case "multi":
+    case "multi_a":
       return Math.max(0, ms.k! - ms.keys!.filter(signed).length);
     case "thresh":
       return ms.subs.map((_, i) => sub(i)).sort((a, b) => a - b).slice(0, ms.k).reduce((a, b) => a + b, 0);
@@ -627,6 +653,8 @@ export function afterMet(n: number, lockTime: number, sequence: number): boolean
 
 export interface RunContext {
   checkSig(pubkey: Uint8Array, sig: Uint8Array): boolean;
+  /** Tapscript (BIP 342): OP_CHECKSIGADD, and no OP_CHECKMULTISIG. */
+  tap?: boolean;
   older(n: number): boolean;
   after(n: number): boolean;
 }
@@ -645,7 +673,8 @@ const sameBytes = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.e
 
 /**
  * Runs a P2WSH witness (its stack, without the witness script) against the witness script, under segwit v0's rules
- * (MINIMALIF, NULLFAIL, NULLDUMMY and a clean stack, as Core's standardness has them). Only the opcodes miniscript
+ * (MINIMALIF, NULLFAIL, NULLDUMMY and a clean stack, as Core's standardness has them), or a Tapscript leaf's stack
+ * against the leaf (ctx.tap: the same rules, which Tapscript makes consensus, with OP_CHECKSIGADD). Only the opcodes miniscript
  * uses are known: any other fails. The signatures that checked, with their keys, or null if the witness does not spend.
  */
 export function runWitness(stackIn: Uint8Array[], script: Uint8Array, ctx: RunContext): { pubkey: Uint8Array; sig: Uint8Array }[] | null {
@@ -749,7 +778,16 @@ export function runWitness(stackIn: Uint8Array[], script: Uint8Array, ctx: RunCo
         if (op === OP.CHECKSIGVERIFY) {
           if (!ok) return null;
         } else stack.push(bool(ok));
-      } else if (op === OP.CHECKMULTISIG || op === OP.CHECKMULTISIGVERIFY) {
+      } else if (op === OP.CHECKSIGADD && ctx.tap) {
+        const pk = pop();
+        const n = readNum(pop());
+        if (n < 0) return null; // never in a miniscript's script
+        const sig = pop();
+        const ok = sig.length > 0 && ctx.checkSig(pk, sig);
+        if (!ok && sig.length) return null;
+        if (ok) signers.push({ pubkey: pk, sig });
+        stack.push(scriptNum(n + (ok ? 1 : 0)));
+      } else if ((op === OP.CHECKMULTISIG || op === OP.CHECKMULTISIGVERIFY) && !ctx.tap) {
         const n = readNum(pop());
         if (n < 0 || n > 20) return null;
         const pks = Array.from({ length: n }, pop).reverse();

@@ -34,7 +34,13 @@ Liana wallets: `wsh(MINISCRIPT)` as Liana writes it, e.g. `wsh(or_d(pk(A),and_v(
 of keys and recovery paths, each key with its own `<a;b>` step (`<0;1>`, `<2;3>`...). Signatures are counted against
 the spending paths, the witness is built for whichever path they complete, and a spend through a recovery path is
 flagged. Miniscript is parsed, type-checked and compiled in `src/miniscript.ts` (P2WSH fragments only; no hash locks,
-timelocks in blocks only). Taproot Liana wallets (`tr(...)`) are not supported yet.
+timelocks in blocks only).
+
+Taproot Liana wallets: `tr(KEY,TREE)` as Liana writes it, with a key path (one primary key) or Liana's unspendable
+internal key (its NUMS xpub, or BIP 341's H), and `multi_a`/`pk` leaves with `older(N)` recovery paths. The
+unspendable key is never shown as a co-signer. Schnorr signatures are checked against their leaf; the witness uses the
+key path when signed there, else the cheapest leaf the signatures complete. `sortedmulti_a`, `multi` in Tapscript, a
+bare internal key other than H, an annex and hash locks are refused.
 
 ## Build
 
