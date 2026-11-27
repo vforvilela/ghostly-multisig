@@ -1,0 +1,17 @@
+{
+  "name": "multisig",
+  "version": "0.1.0",
+  "kind": "mini-app",
+  "title": "Multisig",
+  "tagline": "Pass a multisig transaction between co-signers in your chat",
+  "description": "Paste your wallet's output descriptor and a PSBT. Multisig shows where every satoshi goes, checks the change against your own wallet, and passes the PSBT to your contact over the chat, merging the signatures you each add. It never signs and never sees a private key: signing stays in your own wallet.",
+  "releaseNotes": "First version: 2-of-3 and other P2WSH / P2SH-P2WSH multisig wallets, PSBT checks, signature merging and relay over the chat.",
+  "entry": "index.html",
+  "permissions": ["chat"],
+  "view": "chat",
+  "runtime": { "host": ">=1.2", "clients": ["web", "desktop"] },
+  "license": "MIT",
+  "sources": ["https://raw.githubusercontent.com/vforvilela/ghostly-multisig/HEAD/app.ghostlyapp"],
+  "homepage": "https://github.com/vforvilela/ghostly-multisig",
+  "support": "https://github.com/vforvilela/ghostly-multisig/issues"
+}

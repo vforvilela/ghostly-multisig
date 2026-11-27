@@ -1,0 +1,65 @@
+<!doctype html><html><head><meta charset="utf-8">
+<script>
+(() => {
+  "use strict";
+  for (const name of Object.getOwnPropertyNames(window)) {
+    if (/^(webkit)?RTC/.test(name)) { try { delete window[name]; } catch (e) { /* stays: refused below */ } }
+  }
+  // The session history is the page's, shared with this frame: an app adds no entry to it and moves it nowhere (in
+  // WebKit a frame's `history.go` takes the client's page back). A frame the app makes has an opaque origin of its own,
+  // so its History is out of this realm's reach.
+  const HISTORY = ["pushState", "replaceState", "go", "back", "forward"];
+  for (const name of HISTORY) { try { delete History.prototype[name]; } catch (e) { /* stays: refused below */ } }
+  try { delete window.navigation; } catch (e) { /* stays: refused below */ }
+  if (typeof Navigation === "function") {
+    for (const name of Object.getOwnPropertyNames(Navigation.prototype)) {
+      if (name !== "constructor") { try { delete Navigation.prototype[name]; } catch (e) { /* stays: refused below */ } }
+    }
+  }
+  // The frame's `allow=""` refuses the Clipboard API, but `execCommand("copy")` writes the system clipboard for as long
+  // as a tap in the frame lasts (in Chromium, seconds, from a timer too). An app has no clipboard permission (WISP
+  // 1200), so its clipboard commands answer false; editing commands work on. The wrapper asks nothing the app can
+  // change: it may have changed every prototype by the time it calls.
+  const execCommand = Document.prototype.execCommand;
+  let commands = execCommand;
+  if (typeof execCommand === "function") {
+    const apply = Reflect.apply;
+    const lower = String.prototype.toLowerCase;
+    commands = function (command, showUI, value) {
+      if (arguments.length === 0) return apply(execCommand, this, []);
+      const name = typeof command === "string" ? command : "" + command;
+      const named = apply(lower, name, []);
+      if (named === "copy" || named === "cut" || named === "paste") return false;
+      return apply(execCommand, this, arguments.length > 2 ? [name, showUI, value] : arguments.length > 1 ? [name, showUI] : [name]);
+    };
+    Object.defineProperty(Document.prototype, "execCommand", { configurable: true, writable: true, value: commands });
+  }
+  // Nor the async Clipboard API: WebKit and Firefox let `navigator.clipboard` write the system clipboard whatever the
+  // window's settings or the frame's `allow=""` say (only Chromium refuses it). The app finds no `navigator.clipboard`,
+  // no `ClipboardItem` and no method on `Clipboard.prototype`. Both runners, the same text.
+  const CLIPBOARD = ["read", "readText", "write", "writeText"];
+  try { delete Navigator.prototype.clipboard; } catch (e) { /* stays: refused below */ }
+  try { delete window.ClipboardItem; } catch (e) { /* stays: refused below */ }
+  if (typeof Clipboard === "function") {
+    for (const name of CLIPBOARD) { try { delete Clipboard.prototype[name]; } catch (e) { /* stays: refused below */ } }
+  }
+  const clipboardLeft = () => "clipboard" in navigator || "ClipboardItem" in window
+    || (typeof Clipboard === "function" && CLIPBOARD.some((name) => name in Clipboard.prototype));
+  const stop = (why) => {
+    document.documentElement.textContent = "This app cannot run here.";
+    document.documentElement.setAttribute("data-ghostly-refused", why);
+  };
+  if (self.origin !== "null" || window.parent === window) return stop("origin");
+  if (Object.getOwnPropertyNames(window).some((name) => /^(webkit)?RTC/.test(name))) return stop("webrtc");
+  if (HISTORY.some((name) => name in history) || "navigation" in window) return stop("history");
+  if (document.execCommand !== commands || clipboardLeft()) return stop("clipboard");
+  window.__guard="ok";
+})();</script></head><body>
+<textarea id="in" rows="4" cols="60"></textarea>
+<textarea id="out" rows="4" cols="60"></textarea>
+<script>
+window.__ev=[];
+document.getElementById('in').addEventListener('paste',e=>{const t=e.clipboardData&&e.clipboardData.getData('text/plain');window.__ev.push({type:'paste',len:t?t.length:-1});});
+document.addEventListener('copy',e=>window.__ev.push({type:'copy'}));
+window.__state=()=>({guard:window.__guard,origin:self.origin,clipboardApi:'clipboard' in navigator,inLen:document.getElementById('in').value.length,ev:window.__ev,refused:document.documentElement.getAttribute('data-ghostly-refused')});
+</script></body></html>

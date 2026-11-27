@@ -1,0 +1,4 @@
+import http from "node:http"; import fs from "node:fs";
+const CSP = "sandbox allow-scripts allow-pointer-lock; default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; frame-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'self'";
+const parent = '<!doctype html><meta charset="utf-8"><input id="src" size="80"><input id="back" size="80"><iframe id="f" src="/frame.html" sandbox="allow-scripts allow-pointer-lock" allow="" width="600" height="300"></iframe>';
+http.createServer((q,r)=>{ if(q.url==="/frame.html"){ r.writeHead(200,{"content-type":"text/html","Content-Security-Policy":CSP,"Permissions-Policy":"camera=(), microphone=(), geolocation=()","Referrer-Policy":"no-referrer"}); r.end(fs.readFileSync("./frame.html")); } else { r.writeHead(200,{"content-type":"text/html"}); r.end(parent);} }).listen(18777);

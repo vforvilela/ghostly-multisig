@@ -1,0 +1,280 @@
+/**
+ * The wallet: a multisig output descriptor (BIP 380-383), parsed here because @scure/btc-signer has no descriptor
+ * parser. Only what a co-signer's coordinator exports for a multisig wallet is taken:
+ *
+ *   wsh(sortedmulti(k,KEY,...)), wsh(multi(k,...)), sh(wsh(...)) of either
+ *   KEY = [fingerprint/origin/path]xpub/<0;1>/*   (or /** as BIP 388 and Sparrow write it, or /0/* and /1/* on two lines, as Bitcoin Core lists them)
+ *
+ * Every key needs its origin, as the PSBT's derivation paths are matched against it. SLIP-132 prefixes (Zpub, Vpub...)
+ * are read as xpub/tpub. A `#checksum` is checked when present. The descriptor holds public keys only.
+ *
+ * The wallet is the person's own, pasted from their coordinator: it is never taken from the contact (see docs/protocol.md).
+ */
+import { HDKey } from "@scure/bip32";
+import { p2ms, p2sh, p2wsh } from "@scure/btc-signer";
+import { base58check, hex } from "@scure/base";
+import { sha256 } from "@noble/hashes/sha2.js";
+
+export const HARDENED = 0x80000000;
+
+/** One co-signer's key in the descriptor. */
+export interface WalletKey {
+  /** The master key's fingerprint, 8 hex characters, as in the descriptor's origin. */
+  fingerprint: string;
+  /** The origin path, from the master key to `xpub`. */
+  origin: number[];
+  /** The key as the descriptor gives it, normalised to xpub/tpub. */
+  xpub: string;
+  /** The unhardened steps after `xpub`: a number, "branch" (the receive/change step) or "index" (the `*`). */
+  steps: (number | "branch" | "index")[];
+  hd: HDKey;
+}
+
+export type ScriptType = "wsh" | "sh-wsh";
+export type Chain = "main" | "test";
+
+export interface Wallet {
+  script: ScriptType;
+  sorted: boolean;
+  threshold: number;
+  keys: WalletKey[];
+  /** The value of the branch step for receive and change addresses. */
+  branches: { receive: number; change: number };
+  /** xpub (main) or tpub (test, signet, regtest). */
+  chain: Chain;
+  /** 16 hex characters: the same wallet gives the same id whatever way the descriptor was written. */
+  id: string;
+}
+
+export class DescriptorError extends Error {}
+
+const INPUT_CHARSET = "0123456789()[],'/*abcdefgh@:$%{}IJKLMNOPQRSTUVWXYZ&+-.;<=>?!^_|~ijklmnopqrstuvwxyzABCDEFGH`#\"\\ ";
+const CHECKSUM_CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+const GENERATOR = [0xf5dee51989n, 0xa9fdca3312n, 0x1bab10e32dn, 0x3706b1677an, 0x644d626ffdn];
+
+function polymod(symbols: number[]): bigint {
+  let chk = 1n;
+  for (const value of symbols) {
+    const top = chk >> 35n;
+    chk = ((chk & 0x7ffffffffn) << 5n) ^ BigInt(value);
+    for (let i = 0; i < 5; i++) if ((top >> BigInt(i)) & 1n) chk ^= GENERATOR[i];
+  }
+  return chk;
+}
+
+/** The descriptor's 8-character checksum (BIP 380), or null if it holds a character outside the descriptor charset. */
+export function descriptorChecksum(text: string): string | null {
+  const symbols: number[] = [];
+  let groups: number[] = [];
+  for (const c of text) {
+    const v = INPUT_CHARSET.indexOf(c);
+    if (v < 0) return null;
+    symbols.push(v & 31);
+    groups.push(v >> 5);
+    if (groups.length === 3) {
+      symbols.push(groups[0] * 9 + groups[1] * 3 + groups[2]);
+      groups = [];
+    }
+  }
+  if (groups.length === 1) symbols.push(groups[0]);
+  if (groups.length === 2) symbols.push(groups[0] * 3 + groups[1]);
+  const sum = polymod([...symbols, 0, 0, 0, 0, 0, 0, 0, 0]) ^ 1n;
+  let out = "";
+  for (let i = 0; i < 8; i++) out += CHECKSUM_CHARSET[Number((sum >> BigInt(5 * (7 - i))) & 31n)];
+  return out;
+}
+
+/** Extended-key versions: xpub, and the SLIP-132 forms read as it (main); tpub and its forms (test). */
+const MAIN_VERSIONS = [0x0488b21e, 0x049d7cb2, 0x04b24746, 0x0295b43f, 0x02aa7ed3];
+const TEST_VERSIONS = [0x043587cf, 0x044a5262, 0x045f1cf6, 0x024289ef, 0x02575483];
+const XPUB = 0x0488b21e;
+const TPUB = 0x043587cf;
+const b58 = base58check(sha256);
+
+function normaliseKey(text: string): { xpub: string; chain: Chain; hd: HDKey } {
+  let bytes: Uint8Array;
+  try {
+    bytes = b58.decode(text);
+  } catch {
+    throw new DescriptorError(`not an extended public key: ${text.slice(0, 12)}…`);
+  }
+  if (bytes.length !== 78) throw new DescriptorError(`not an extended public key: ${text.slice(0, 12)}…`);
+  const version = new DataView(bytes.buffer, bytes.byteOffset).getUint32(0);
+  const chain: Chain | null = MAIN_VERSIONS.includes(version) ? "main" : TEST_VERSIONS.includes(version) ? "test" : null;
+  if (!chain) throw new DescriptorError(`a private or unknown key: ${text.slice(0, 4)}…. Paste the descriptor with public keys only.`);
+  const out = bytes.slice();
+  new DataView(out.buffer).setUint32(0, chain === "main" ? XPUB : TPUB);
+  const xpub = b58.encode(out);
+  const versions = chain === "main" ? { private: 0x0488ade4, public: XPUB } : { private: 0x04358394, public: TPUB };
+  return { xpub, chain, hd: HDKey.fromExtendedKey(xpub, versions) };
+}
+
+function pathStep(step: string): number {
+  const m = /^(\d+)(['hH]?)$/.exec(step);
+  if (!m) throw new DescriptorError(`not a derivation step: ${step}`);
+  const n = Number(m[1]);
+  if (!Number.isSafeInteger(n) || n >= HARDENED) throw new DescriptorError(`derivation step out of range: ${step}`);
+  return m[2] ? n + HARDENED : n;
+}
+
+interface ParsedKey {
+  fingerprint: string;
+  origin: number[];
+  xpub: string;
+  chain: Chain;
+  hd: HDKey;
+  /** The steps after the key, with the receive/change step as a list of its values (one, or two for `<a;b>`). */
+  steps: (number | number[] | "index")[];
+}
+
+function parseKey(raw: string): ParsedKey {
+  // `/**` is BIP 388's (and Sparrow's) short form of `/<0;1>/*`.
+  const text = raw.endsWith("/**") ? `${raw.slice(0, -3)}/<0;1>/*` : raw;
+  const m =/^\[([0-9a-fA-F]{8})((?:\/[0-9]+['hH]?)*)\]([1-9A-HJ-NP-Za-km-z]+)((?:\/(?:[0-9]+|<[0-9]+;[0-9]+>|\*))*)$/.exec(text);
+  if (!m) {
+    if (!text.startsWith("[")) throw new DescriptorError("every key needs its origin, as [fingerprint/path]xpub");
+    throw new DescriptorError(`a key this app cannot read: ${text.slice(0, 24)}…`);
+  }
+  const { xpub, chain, hd } = normaliseKey(m[3]);
+  const origin = m[2] ? m[2].slice(1).split("/").map(pathStep) : [];
+  if (hd.depth !== origin.length) throw new DescriptorError(`key ${m[1].toLowerCase()}: its origin path does not match its depth`);
+  const steps = m[4] ? m[4].slice(1).split("/").map((s): number | number[] | "index" => {
+    if (s === "*") return "index";
+    if (s.startsWith("<")) return s.slice(1, -1).split(";").map(pathStep);
+    return pathStep(s);
+  }) : [];
+  if (steps.at(-1) !== "index" || steps.filter((s) => s === "index").length !== 1) {
+    throw new DescriptorError("every key must end in /* (a ranged descriptor)");
+  }
+  if (steps.some((s) => typeof s === "number" && s >= HARDENED) || steps.some((s) => Array.isArray(s) && s.some((n) => n >= HARDENED))) {
+    throw new DescriptorError("hardened steps after the key cannot be derived from a public key");
+  }
+  return { fingerprint: m[1].toLowerCase(), origin, xpub, chain, hd, steps };
+}
+
+interface ParsedLine {
+  script: ScriptType;
+  sorted: boolean;
+  threshold: number;
+  keys: ParsedKey[];
+}
+
+function parseLine(raw: string): ParsedLine {
+  let text = raw.trim();
+  const hash = text.lastIndexOf("#");
+  if (hash >= 0) {
+    const given = text.slice(hash + 1);
+    text = text.slice(0, hash);
+    if (descriptorChecksum(text) !== given) throw new DescriptorError("the descriptor's checksum does not match: it was changed or cut");
+  }
+  text = text.replace(/\s+/g, "");
+  let script: ScriptType = "wsh";
+  let body: string;
+  const sh = /^sh\(wsh\((.*)\)\)$/.exec(text);
+  const wsh = /^wsh\((.*)\)$/.exec(text);
+  if (sh) {
+    script = "sh-wsh";
+    body = sh[1];
+  } else if (wsh) {
+    body = wsh[1];
+  } else {
+    throw new DescriptorError("only wsh(...) and sh(wsh(...)) multisig descriptors are supported");
+  }
+  const ms = /^(sortedmulti|multi)\((\d+),(.*)\)$/.exec(body);
+  if (!ms) throw new DescriptorError("not a multisig descriptor: expected sortedmulti(...) or multi(...)");
+  const threshold = Number(ms[2]);
+  const keys = ms[3].split(",").map(parseKey);
+  if (keys.length < 2 || keys.length > 15) throw new DescriptorError("a multisig wallet has 2 to 15 keys");
+  if (threshold < 1 || threshold > keys.length) throw new DescriptorError(`threshold ${threshold} of ${keys.length} keys is not possible`);
+  return { script, sorted: ms[1] === "sortedmulti", threshold, keys };
+}
+
+/** The wallet from a pasted descriptor: one line with `<0;1>`, or two lines (receive /0/*, change /1/*). Lines starting with `#` are comments. */
+export function parseWallet(input: string): Wallet {
+  const lines = input.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
+  if (lines.length === 0) throw new DescriptorError("paste the wallet's output descriptor");
+  if (lines.length > 2) throw new DescriptorError("paste one descriptor (or its receive and change lines)");
+  const parsed = lines.map(parseLine);
+  const first = parsed[0];
+  const shape = (p: ParsedLine) => JSON.stringify([p.script, p.sorted, p.threshold, p.keys.map((k) => [k.fingerprint, k.origin, k.xpub, k.steps.length])]);
+  if (parsed.length === 2 && shape(parsed[0]) !== shape(parsed[1])) throw new DescriptorError("the two lines are not the same wallet");
+  // The step whose value differs between receive and change: a <a;b> step, or the one that differs between the lines.
+  const stepCount = first.keys[0].steps.length;
+  if (first.keys.some((k) => k.steps.length !== stepCount)) throw new DescriptorError("the keys' paths after the xpub differ in length");
+  let branchAt = -1;
+  let receive = 0;
+  let change = 1;
+  for (let i = 0; i < stepCount; i++) {
+    const values = parsed.flatMap((p) => p.keys.map((k) => k.steps[i]));
+    if (values.some(Array.isArray)) {
+      if (!values.every((v) => Array.isArray(v) && v.length === 2 && v[0] === (values[0] as number[])[0] && v[1] === (values[0] as number[])[1])) {
+        throw new DescriptorError("the keys' <receive;change> steps differ");
+      }
+      if (parsed.length === 2) throw new DescriptorError("a <receive;change> step is for one line only");
+      [receive, change] = values[0] as number[];
+      branchAt = i;
+    } else if (new Set(values.map(String)).size > 1) {
+      // Two lines: every key's step i is the same within a line, and the lines differ.
+      const perLine = parsed.map((p) => new Set(p.keys.map((k) => String(k.steps[i]))));
+      if (parsed.length !== 2 || perLine.some((s) => s.size !== 1)) throw new DescriptorError("the keys' paths after the xpub differ");
+      receive = parsed[0].keys[0].steps[i] as number;
+      change = parsed[1].keys[0].steps[i] as number;
+      branchAt = i;
+    }
+  }
+  if (branchAt < 0) {
+    if (parsed.length === 2) throw new DescriptorError("the two lines are the same descriptor");
+    throw new DescriptorError("the descriptor has no change addresses: use /<0;1>/* or paste the /0/* and /1/* lines");
+  }
+  if (receive === change) throw new DescriptorError("receive and change are the same branch");
+  const chains = new Set(first.keys.map((k) => k.chain));
+  if (chains.size !== 1) throw new DescriptorError("the keys mix mainnet (xpub) and test (tpub) keys");
+  const keys: WalletKey[] = first.keys.map((k) => ({
+    fingerprint: k.fingerprint,
+    origin: k.origin,
+    xpub: k.xpub,
+    hd: k.hd,
+    steps: k.steps.map((s, i) => (i === branchAt ? "branch" : s)) as WalletKey["steps"],
+  }));
+  if (new Set(keys.map((k) => k.xpub)).size !== keys.length) throw new DescriptorError("the same key is in the wallet twice");
+  const canonical = [
+    first.script,
+    first.sorted ? "sorted" : "multi",
+    first.threshold,
+    receive,
+    change,
+    ...(first.sorted ? [...keys].sort((a, b) => (a.xpub < b.xpub ? -1 : 1)) : keys).map(
+      (k) => `${k.fingerprint}/${k.origin.join("/")}/${k.xpub}/${k.steps.join("/")}`,
+    ),
+  ].join("|");
+  const id = hex.encode(sha256(new TextEncoder().encode(canonical))).slice(0, 16);
+  return { script: first.script, sorted: first.sorted, threshold: first.threshold, keys, branches: { receive, change }, chain: [...chains][0], id };
+}
+
+/** The public keys of the wallet's address at (branch, index), in the descriptor's key order. */
+export function derivePubkeys(wallet: Wallet, branch: number, index: number): Uint8Array[] {
+  return wallet.keys.map((key) => {
+    let node = key.hd;
+    for (const step of key.steps) node = node.deriveChild(step === "branch" ? branch : step === "index" ? index : step);
+    if (!node.publicKey) throw new DescriptorError("could not derive a public key");
+    return node.publicKey;
+  });
+}
+
+function compare(a: Uint8Array, b: Uint8Array): number {
+  for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) return a[i] - b[i];
+  return a.length - b.length;
+}
+
+/** The wallet's output script and witness script at (branch, index). */
+export function deriveScript(wallet: Wallet, branch: number, index: number): { script: Uint8Array; witnessScript: Uint8Array } {
+  let pubkeys = derivePubkeys(wallet, branch, index);
+  if (wallet.sorted) pubkeys = [...pubkeys].sort(compare);
+  const ms = p2ms(wallet.threshold, pubkeys);
+  const wsh = p2wsh(ms);
+  if (wallet.script === "wsh") return { script: wsh.script, witnessScript: ms.script };
+  return { script: p2sh(wsh).script, witnessScript: ms.script };
+}
+
+/** `a-b-c` key labels: each key's fingerprint, the way coordinators show them. */
+export const fingerprints = (wallet: Wallet): string[] => wallet.keys.map((k) => k.fingerprint);
