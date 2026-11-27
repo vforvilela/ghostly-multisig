@@ -9,6 +9,9 @@ What each published version of Multisig changed, newest first. A version is publ
 - Air-gapped signers (Passport, Keystone, Jade, Sparrow): the PSBT as an animated `ur:crypto-psbt` QR code, the
   wallet as a `ur:bytes` QR of Coldcard's multisig file, and the signed PSBT back from a microSD file (binary or text)
   or pasted UR text. Own UR encoder: every part equal to @ngraveio/bc-ur's, pure and mixed.
+- The wallet file for hardware signers is read as the same wallet by Coldcard's firmware (simulator), Sparrow 2.5.8,
+  Passport and Keystone 3 (mainnet only: Keystone refuses testnet multisig). Nested SegWit is written `P2WSH-P2SH`,
+  the one spelling all four accept.
 - Reads Caravan's wallet file (P2WSH and P2SH-P2WSH) as the `sortedmulti` descriptor it describes, on the network
   it names; its addresses match Caravan's own for Caravan's fixture wallets. Legacy P2SH is refused.
 - Reads a PSBT in base64 or hex and shows outputs, change (re-derived from the descriptor), fee and sat/vB, inputs,

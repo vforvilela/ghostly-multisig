@@ -606,7 +606,7 @@ export function coldcardFile(w: Wallet): string {
     "# Multisig setup file (Coldcard format), from Ghostly Multisig",
     `Name: ghostly-${w.id.slice(0, 8)}`,
     `Policy: ${w.threshold} of ${w.keys.length}`,
-    `Format: ${w.script === "wsh" ? "P2WSH" : "P2SH-P2WSH"}`,
+    `Format: ${w.script === "wsh" ? "P2WSH" : "P2WSH-P2SH"}`,
   ];
   for (const k of w.keys) lines.push("", `Derivation: ${path(k.origin)}`, `${k.fingerprint.toUpperCase()}: ${k.xpub}`);
   return `${lines.join("\n")}\n`;

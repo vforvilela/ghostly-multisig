@@ -15,6 +15,7 @@ files and need no node or network; the scripts regenerate the generated ones.
 | `caravan.json` | `@caravan/psbt` 2.1.2 and `@caravan/bitcoin` 0.4.7 on `signing.json`'s spend, and the first addresses of each wallet file in `caravan/` | test data | `scripts/interop/caravan.mjs` |
 | `ur.json` | `@ngraveio/bc-ur` 1.1.13 and `@keystonehq/bc-ur-registry` 0.8.1 on `signing.json`'s PSBTs; QR read back with jsQR 1.4.0 | test data | `scripts/interop/ur.mjs <node_modules>` |
 | `liana.json` | a Liana wallet (three spending paths) run by lianad 16.0 (release binary, signature checked) on regtest: a primary-path and a 10-block recovery-path spend, created, merged, finalised and broadcast by lianad, co-signed by Bitcoin Core v30.2 wallets, mined by Core | test data, fixed seeds | `scripts/interop/liana.mjs` |
+| `coldcard.json` | The app's Coldcard-format multisig file read by Coldcard's simulator (firmware fab5f64a), Sparrow 2.5.8, Passport (passport2 f51b2ca) and Keystone 3 (bd06fe2), each from its own source | `scripts/interop/coldcard.mjs` |
 | `liana-taproot.json` | two Taproot Liana wallets (unspendable internal key with three leaves; key path with one recovery leaf) run by lianad 16.0 on regtest: a primary and a 10-block recovery spend of each, created, merged, finalised and broadcast by lianad, co-signed by Bitcoin Core v30.2 wallets, mined by Core | test data, fixed seeds | `scripts/interop/liana-taproot.mjs` |
 | `caravan/*.json` | Caravan's wallet-file fixtures, caravan-bitcoin/caravan `dff6283` (`apps/coordinator/fixtures/caravan/`) | MIT | copied |
 
